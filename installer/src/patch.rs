@@ -456,7 +456,14 @@ pub fn launch_game(ctx: LaunchGameContext, tx: Sender<StatusType>) {
 
             let steam_dir = ctx.directories.steam_dir.as_ref().unwrap();
 
+            #[cfg(target_os = "windows")]
             let _process = std::process::Command::new(steam_dir.join("steam.exe"))
+                .args(["-applaunch", &GAME_ID.to_string()])
+                .spawn()
+                .map_err(|_| MessageType::Error("Failed to Launch Game".into()))?;
+
+            #[cfg(target_os = "linux")]
+            let _process = std::process::Command::new("steam")
                 .env("WINEDLLOVERRIDES", "winhttp=b,n")
                 .args(["-applaunch", &GAME_ID.to_string()])
                 .spawn()

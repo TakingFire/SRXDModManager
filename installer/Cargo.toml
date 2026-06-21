@@ -44,8 +44,6 @@ eframe = { version = "0.33.3", default-features = false, features = [
   "persistence",
   "x11"
 ] }
-
-[target.x86_64-unknown-linux-musl.dependencies]
 openssl = { version = "0.10", features = ["vendored"] }
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
