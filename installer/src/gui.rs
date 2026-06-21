@@ -8,6 +8,7 @@ use crate::app::{Installer, InstallerState, ModEntry, ModEntryRef, ModEntryState
 
 #[allow(unused)]
 const GUIDE_URL: &str = "https://useredge.github.io/spinshare-wiki/modding/installation-guide/";
+const ISSUES_URL: &str = "https://github.com/TakingFire/SRXDModManager/issues/new";
 
 #[derive(Default)]
 pub struct Gui {
@@ -167,9 +168,7 @@ impl Gui {
                         self.installer.init();
                     }
                     if ui.small_button("Report an issue").clicked() {
-                        ui.ctx().open_url(OpenUrl::new_tab(
-                            "https://github.com/TakingFire/SRXDModTools/issues/new",
-                        ));
+                        ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
                     }
                 });
             });
@@ -462,8 +461,6 @@ impl Gui {
     }
 
     fn build_list(&mut self) {
-        println!("Rebuilding List");
-
         self.updatable_mods = self
             .installer
             .mods
