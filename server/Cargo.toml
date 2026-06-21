@@ -1,0 +1,22 @@
+[package]
+name = "server"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+anyhow = { version = "1.0.102" }
+axum = "0.8.9"
+futures = "0.3.32"
+hex = "0.4.3"
+indicatif = { version = "0.18.4" }
+model = { path = "../model" }
+natord = "1.0.9"
+reqwest = { version = "0.13.4", features = ["json"] }
+serde = "1.0.228"
+serde_json = "1.0.150"
+sha2 = "0.11.0"
+tokio = { version = "1.52.3", features = ["full"] }
+wildmatch = { version = "2.6.1", features = ["serde"] }
+
+[target.x86_64-unknown-linux-musl.dependencies]
+openssl = { version = "0.10", features = ["vendored"] }

@@ -1,0 +1,275 @@
+{
+  "mods": [
+    {
+      "id": "Raoul1808_SpinCore",
+      "name": "SpinCore",
+      "description": "Utility and UI functions for other mods",
+      "author": "Raoul1808",
+      "repository": "SpinCore",
+      "file": "SpinCore.zip",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "Raoul1808_WowSoSecret",
+      "name": "Wow So Secret",
+      "description": "Hide or replace Discord status text",
+      "author": "Raoul1808",
+      "repository": "WowSoSecret",
+      "file": "WowSoSecret.dll",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "Raoul1808_SpeenChroma2",
+      "name": "Speen Chroma 2",
+      "description": "Dynamic per-chart color effects",
+      "author": "Raoul1808",
+      "repository": "SpeenChroma2",
+      "file": "SpeenChroma2.dll",
+      "categories": ["Charting", "Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "Raoul1808_DynamicTrackSpeed",
+      "name": "Dynamic Track Speed",
+      "description": "Dynamic per-chart track speed",
+      "author": "Raoul1808",
+      "repository": "DynamicTrackSpeed",
+      "file": "DynamicTrackSpeed.dll",
+      "categories": ["Charting", "Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "Raoul1808_ForceCombo",
+      "name": "Force Combo",
+      "description": "Automatically restart when streak is broken",
+      "author": "Raoul1808",
+      "repository": "ForceCombo",
+      "file": "ForceCombo.dll",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "SRXDModdingGroup_ChartHelper",
+      "name": "Chart Helper",
+      "description": "Library for loading and parsing chart files",
+      "author": "SRXDModdingGroup",
+      "repository": "SRXDChartStatistics",
+      "file": "ChartHelper.zip",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "SRXDModdingGroup_NoIntro",
+      "name": "No Intro",
+      "description": "Skips the intro sequence",
+      "author": "SRXDModdingGroup",
+      "repository": "NoIntro",
+      "file": "NoIntro.dll",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "UserEdge_FolderSwitcher",
+      "name": "Folder Switcher",
+      "description": "Switch between multiple Customs directories",
+      "author": "UserEdge",
+      "repository": "SRXDFolderSwitcher",
+      "file": "SRXDFolderSwitcher.dll",
+      "categories": ["Charting", "Utility"],
+      "dependencies": ["Raoul1808_SpinCore", "SRXDModdingGroup_ChartHelper"]
+    },
+    {
+      "id": "UserEdge_ModernCTM",
+      "name": "Modern CTM",
+      "description": "Click-to-move behavior from the Switch version",
+      "author": "UserEdge",
+      "repository": "ModernCTM",
+      "file": "ModernCTM.dll",
+      "categories": ["Utility"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "GaviGuy_EditorChanges",
+      "name": "Editor Changes",
+      "description": "Extra functionality for the chart editor",
+      "author": "GaviGuy",
+      "repository": "EditorChanges",
+      "file": "EditorChanges.dll",
+      "categories": ["Charting"],
+      "dependencies": ["Raoul1808_SpinCore", "SRXDModdingGroup_ChartHelper"]
+    },
+    {
+      "id": "CxerizoBirb_HitBarMove",
+      "name": "Hit Bar Move",
+      "description": "Customization options for the timing bar",
+      "author": "CxerizoBirb",
+      "repository": "HitBarMove",
+      "file": "HitBarMove.dll",
+      "categories": ["Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "SRXDModdingGroup_SpinShareLib",
+      "name": "SpinShareLib",
+      "description": "SpinShare API utilities for other mods",
+      "author": "SRXDModdingGroup",
+      "repository": "SpinShareLibSharp",
+      "file": "SpinShareLib.dll",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "TheBlackParrot_SpinSpout",
+      "name": "SpinSpout",
+      "description": "Spout2 output for direct game capture",
+      "author": "TheBlackParrot",
+      "repository": "SpinSpout",
+      "file": "SpinSpout.dll",
+      "categories": ["Integrations"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_AdditionalVRSettings",
+      "name": "Additional VR Settings",
+      "description": "Additional settings for the VR view",
+      "author": "TheBlackParrot",
+      "repository": "SRXD_AdditionalVRSettings",
+      "file": "AdditionalVRSettings.dll",
+      "categories": ["Utility"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_SpinRequests",
+      "name": "SpinRequests",
+      "description": "In-game song request manager",
+      "author": "TheBlackParrot",
+      "repository": "SpinRequests",
+      "file": "SpinRequests*.zip",
+      "categories": ["Integrations"],
+      "dependencies": ["Raoul1808_SpinCore", "SRXDModdingGroup_SpinShareLib"]
+    },
+    {
+      "id": "TheBlackParrot_SpinRequestsTwitchBridge",
+      "name": "SpinRequests Twitch Bridge",
+      "description": "Twitch integration for SpinRequests",
+      "author": "TheBlackParrot",
+      "repository": "SpinRequestsTwitchBridge",
+      "file": "SpinRequestsTwitchBridge*.zip",
+      "categories": ["Integrations"],
+      "dependencies": ["Raoul1808_SpinCore", "TheBlackParrot_SpinRequests"]
+    },
+    {
+      "id": "TheBlackParrot_CustomMatcaps",
+      "name": "Custom Matcaps",
+      "description": "Replace track and wheel materials",
+      "author": "TheBlackParrot",
+      "repository": "SRXD_CustomMatcaps",
+      "file": "CustomMatcaps.dll",
+      "categories": ["Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_SpinLists",
+      "name": "SpinLists",
+      "description": "Customizable and shareable song playlists",
+      "author": "TheBlackParrot",
+      "repository": "SpinLists",
+      "file": "SpinLists.dll",
+      "categories": ["Charting", "Utility"],
+      "dependencies": ["Raoul1808_SpinCore", "SRXDModdingGroup_SpinShareLib"]
+    },
+    {
+      "id": "TheBlackParrot_SpinShareUpdater",
+      "name": "SpinShare Updater",
+      "description": "Automatically keep SpinShare charts up-to-date",
+      "author": "TheBlackParrot",
+      "repository": "SpinShareUpdater",
+      "file": "SpinShareUpdater.dll",
+      "categories": ["Charting", "Integrations"],
+      "dependencies": ["Raoul1808_SpinCore", "SRXDModdingGroup_SpinShareLib"]
+    },
+    {
+      "id": "TheBlackParrot_BackgroundTraversal",
+      "name": "Background Traversal",
+      "description": "Show selected chart backgrounds in the chart menu",
+      "author": "TheBlackParrot",
+      "repository": "BackgroundTraversal",
+      "file": "BackgroundTraversal.dll",
+      "categories": ["Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_HudTweaks",
+      "name": "HUD Tweaks",
+      "description": "Expanded HUD customization options",
+      "author": "TheBlackParrot",
+      "repository": "SRXD_HUDTweaks",
+      "file": "HUDTweaks.dll",
+      "categories": ["Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_DisableFilmGrain",
+      "name": "Disable Film Grain",
+      "description": "Removes film grain post-processing",
+      "author": "TheBlackParrot",
+      "repository": "SRXD_DisableFilmGrain",
+      "file": "DisableFilmGrain.dll",
+      "categories": ["Appearance"]
+    },
+    {
+      "id": "TheBlackParrot_CustomMenuColors",
+      "name": "Custom Menu Colors",
+      "description": "Custom palettes for UI and menus",
+      "author": "TheBlackParrot",
+      "repository": "SRXD_CustomMenuColors",
+      "file": "CustomMenuColors.dll",
+      "categories": ["Appearance"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_QRCodeUnlocker",
+      "name": "QR Code Unlocker",
+      "description": "Allows QR codes to be used for custom charts",
+      "author": "TheBlackParrot",
+      "repository": "SRXD_QRCodeUnlocker",
+      "file": "QRCodeUnlocker.dll",
+      "categories": ["Charting", "Utility"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TheBlackParrot_MuteTwitchVODTrack",
+      "name": "Mute Twitch VOD Track",
+      "description": "Automatically toggle OBS tracks when selecting songs",
+      "author": "TheBlackParrot",
+      "repository": "MuteTwitchVODTrack",
+      "file": "MuteTwitchVODTrack*.zip",
+      "categories": ["Integrations"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TakingFire_SpinStatus",
+      "name": "SpinStatus",
+      "description": "Live game events for stream overlays",
+      "author": "TakingFire",
+      "repository": "SpinStatus",
+      "file": "SpinStatus.dll",
+      "categories": ["Integrations"],
+      "dependencies": ["Raoul1808_SpinCore"]
+    },
+    {
+      "id": "TakingFire_MoreTrackSpeeds",
+      "name": "More Track Speeds",
+      "description": "Doubles the track speed limit to 120",
+      "author": "TakingFire",
+      "repository": "SRXDTweaks",
+      "file": "MoreTrackSpeeds.dll",
+      "categories": ["Utility"]
+    },
+    {
+      "id": "TakingFire_TouchableMedals",
+      "name": "Touchable Medals",
+      "description": "Adds cursor interaction to medals",
+      "author": "TakingFire",
+      "repository": "SRXDTweaks",
+      "file": "TouchableMedals.dll",
+      "categories": ["Appearance"]
+    }
+  ]
+}
