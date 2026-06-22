@@ -42,9 +42,11 @@ zip = { version = "7.2.0", default-features = false, features = ["deflate"] }
 eframe = { version = "0.33.3", default-features = false, features = [
   "glow",
   "persistence",
+  "wayland",
   "x11"
 ] }
 openssl = { version = "0.10", features = ["vendored"] }
+regashii = "0.4.0"
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
 winresource = "0.1"
