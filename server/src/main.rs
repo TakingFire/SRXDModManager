@@ -83,8 +83,13 @@ async fn build_manifest() -> anyhow::Result<()> {
     }
 
     for mod_entry in &mut manifest.mods {
+        mod_entry.url = format!(
+            "https://github.com/{}/{}",
+            mod_entry.author, mod_entry.repository
+        );
+
         for category in &mod_entry.categories {
-            if !manifest.categories.contains(&category) {
+            if !manifest.categories.contains(category) {
                 manifest.categories.push(category.clone());
             }
         }

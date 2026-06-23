@@ -77,7 +77,9 @@ pub async fn get_mod_releases(entry: &mut Mod, progress: ProgressBar) -> Result<
             if wildmatch::WildMatch::new(&entry.file).matches(&asset.name) {
                 let sha256: String;
 
-                if asset.digest.is_none() {
+                if let Some(digest) = asset.digest {
+                    sha256 = digest;
+                } else {
                     let file = GH_CLIENT
                         .get(asset.browser_download_url.clone())
                         .bearer_auth(&*GH_TOKEN.clone().unwrap())
@@ -89,8 +91,6 @@ pub async fn get_mod_releases(entry: &mut Mod, progress: ProgressBar) -> Result<
                     let mut hasher = sha2::Sha256::new();
                     hasher.update(file);
                     sha256 = hex::encode(hasher.finalize());
-                } else {
-                    sha256 = asset.digest.unwrap();
                 }
 
                 entry.versions.push(Version {

@@ -4,13 +4,23 @@ pub fn get_version() -> String {
     env!("CARGO_PKG_VERSION").into()
 }
 
-#[derive(Serialize, Deserialize, Debug, Default, Clone)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 #[serde(default)]
 pub struct Manifest {
     #[serde(default = "get_version")]
     pub version: String,
     pub mods: Vec<Mod>,
     pub categories: Vec<String>,
+}
+
+impl Default for Manifest {
+    fn default() -> Self {
+        Self {
+            version: get_version(),
+            mods: Default::default(),
+            categories: Default::default(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Debug, Default, Clone)]
