@@ -162,6 +162,10 @@ impl Installer {
                     patch::TaskContext::InstallMod(ctx) => {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Installed;
+                            self.log(MessageType::Success(format!(
+                                "Installed {}",
+                                ctx.entry.entry.id
+                            )));
                         }
                     }
 
