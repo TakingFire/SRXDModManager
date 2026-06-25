@@ -78,7 +78,7 @@ pub async fn get_mod_releases(entry: &mut Mod, progress: ProgressBar) -> Result<
                 let sha256: String;
 
                 if let Some(digest) = asset.digest {
-                    sha256 = digest;
+                    sha256 = (&digest)[7..].into();
                 } else {
                     let file = GH_CLIENT
                         .get(asset.browser_download_url.clone())
@@ -97,7 +97,7 @@ pub async fn get_mod_releases(entry: &mut Mod, progress: ProgressBar) -> Result<
                     name: release.tag_name.clone(),
                     url: asset.browser_download_url.clone(),
                     created_at: release.published_at.clone(),
-                    digest: (&sha256)[7..].into(),
+                    digest: sha256,
                 });
             }
         }
