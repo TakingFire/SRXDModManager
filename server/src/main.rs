@@ -6,6 +6,8 @@ use indicatif::{MultiProgress, ProgressBar};
 use model::Manifest;
 use tokio::{self, time::interval};
 
+use crate::template::{get_template_github, get_template_local};
+
 mod template;
 
 static PORT: LazyLock<String> = LazyLock::new(|| std::env::var("PORT").unwrap_or("8080".into()));
@@ -57,12 +59,14 @@ async fn get_mods() -> Result<Json<Manifest>, StatusCode> {
 }
 
 async fn build_manifest() -> anyhow::Result<()> {
-    let template: Manifest = serde_json::from_str(
-        &tokio::fs::read_to_string("assets/template.json")
-            .await
-            .expect("Failed to access template.json"),
-    )
-    .expect("Failed to parse template.json");
+    let template: Manifest = get_template_github()
+        .await
+        .inspect_err(|_| eprintln!("Using fallback template"))
+        .unwrap_or(
+            get_template_local()
+                .await
+                .inspect_err(|_| eprintln!("Failed to read template.json"))?,
+        );
 
     let mut manifest = match tokio::fs::read_to_string("assets/manifest.json").await {
         Ok(str) => serde_json::from_str(&str).unwrap_or_default(),

@@ -27,6 +27,8 @@ pub struct GHAsset {
     pub digest: Option<String>,
 }
 
+const TEMPLATE_URL: &str = "https://raw.githubusercontent.com/TakingFire/SRXDModManager/refs/heads/main/server/assets/template.json";
+
 static GH_TOKEN: LazyLock<Option<String>> = LazyLock::new(|| std::env::var("GH_SERVER_TOKEN").ok());
 
 static GH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
@@ -40,6 +42,20 @@ static GH_CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
         .build()
         .unwrap()
 });
+
+pub async fn get_template_local() -> anyhow::Result<Manifest> {
+    let template: Manifest =
+        serde_json::from_str(&tokio::fs::read_to_string("assets/template.json").await?)?;
+
+    Ok(template)
+}
+
+pub async fn get_template_github() -> anyhow::Result<Manifest> {
+    let template: Manifest =
+        serde_json::from_str(&GH_CLIENT.get(TEMPLATE_URL).send().await?.text().await?)?;
+
+    Ok(template)
+}
 
 pub async fn get_mod_releases(entry: &mut Mod, progress: ProgressBar) -> Result<()> {
     if GH_TOKEN.is_none() {
