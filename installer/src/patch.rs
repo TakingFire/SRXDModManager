@@ -80,7 +80,7 @@ impl MessageType {
         match self {
             MessageType::Default(s) => RichText::new(s),
             MessageType::Success(s) => RichText::new(s).color(Color32::from_rgb(90, 170, 255)),
-            MessageType::Warning(s) => RichText::new(s).color(Color32::YELLOW),
+            MessageType::Warning(s) => RichText::new(s).color(Color32::from_rgb(255, 160, 80)),
             MessageType::Error(s) => RichText::new(s).color(Color32::RED),
         }
     }

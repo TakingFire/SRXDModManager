@@ -155,6 +155,15 @@ impl Installer {
                             installed_count
                         )));
 
+                        let unrecognized_count = ctx.out_digest_list.len() - installed_count;
+
+                        if unrecognized_count > 0 {
+                            self.log(MessageType::Warning(format!(
+                                "{} Mods(s) Unrecognized",
+                                unrecognized_count
+                            )));
+                        }
+
                         self.state = InstallerState::Ready;
                         self.log(MessageType::Success("Ready".into()))
                     }
