@@ -7,6 +7,10 @@ Includes automatic patching, mod updates, and dependency management.
 
 ### Download: [Windows](https://github.com/TakingFire/SRXDModManager/releases/latest/download/SRXDManager-windows-x64.exe) • [Linux](https://github.com/TakingFire/SRXDModManager/releases/latest/download/SRXDManager-linux-x64) • [Linux *(AppImage)*](https://github.com/TakingFire/SRXDModManager/releases/latest/download/SRXDManager-linux-x64.AppImage)
 
+> [!NOTE]
+> Microsoft Defender is currenly flagging the Windows build as malware.\
+> Try downloading [this version](https://github.com/TakingFire/SRXDModManager/releases/latest/download/SRXDManager-windows-x64-uncompressed.exe), or follow [these steps](https://pureinfotech.com/allow-blocked-file-app-microsoft-defender-antivirus/#allow_blocked_file_defender) to allow the app to download.
+
 Encounter a problem? Please [**create an issue**](https://github.com/TakingFire/SRXDModManager/issues/new)!
 
 ### Submitting Mods
