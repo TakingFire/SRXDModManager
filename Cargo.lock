@@ -1546,6 +1546,7 @@ dependencies = [
  "eframe",
  "flume",
  "model",
+ "natord",
  "open",
  "openssl",
  "parking_lot",

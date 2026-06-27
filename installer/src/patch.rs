@@ -1,11 +1,12 @@
 #![allow(clippy::redundant_closure_call)]
 
-use std::time::Duration;
+use std::{cmp::Ordering, time::Duration};
 
 use configparser::ini::Ini;
 use eframe::egui::{Color32, RichText};
 use flume::Sender;
 use model::Manifest;
+use serde_json::Value;
 use tokio::fs;
 
 use crate::app::{DirectoryList, ModEntry, ModEntryState};
@@ -40,6 +41,7 @@ pub struct GetPatcherContext {
 #[derive(Default)]
 pub struct GetManifestContext {
     pub out_manifest: Manifest,
+    pub out_outdated: bool,
 }
 
 pub struct GetInstalledModsContext {
@@ -219,7 +221,22 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{}", e))
                 .map_err(|err| MessageType::Error(err.to_string()))?;
 
-            ctx.out_manifest = serde_json::from_str(&res)
+            let manifest: Value = serde_json::from_str(&res)
+                .inspect_err(|e| eprintln!("{}", e))
+                .map_err(|_| MessageType::Error("Failed to Read File".into()))?;
+
+            ctx.out_outdated = manifest
+                .get("version")
+                .and_then(|version| version.as_str())
+                .map(|version| {
+                    matches!(
+                        natord::compare_ignore_case(version, &model::get_version()),
+                        Ordering::Greater
+                    )
+                })
+                .unwrap_or(false);
+
+            ctx.out_manifest = serde_json::from_value(manifest)
                 .inspect_err(|e| eprintln!("{}", e))
                 .map_err(|_| MessageType::Error("Failed to Read Mod List".into()))?;
 
@@ -396,6 +413,7 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
 
             let app_dir = ctx.directories.app_dir.as_ref().unwrap();
             let game_dir = ctx.directories.game_dir.as_ref().unwrap();
+            #[allow(unused)]
             let steam_dir = ctx.directories.steam_dir.as_ref().unwrap();
 
             let base_dir = game_dir.join("UnityPlayer.dll");

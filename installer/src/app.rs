@@ -1,6 +1,7 @@
+use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
+
 use flume::{Receiver, Sender};
 use model::{Manifest, Mod};
-use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
 
 use crate::patch::{
     self, GetDirectoriesContext, GetInstalledModsContext, GetManifestContext, GetPatcherContext,
@@ -61,6 +62,7 @@ pub enum InstallerState {
     Init,
     Ready,
     Launching,
+    Outdated,
     Error,
 }
 
@@ -123,7 +125,11 @@ impl Installer {
                         self.build_mod_list();
                         self.build_id_digest_maps();
 
-                        self.get_patcher();
+                        if ctx.out_outdated {
+                            self.state = InstallerState::Outdated;
+                        } else {
+                            self.get_patcher();
+                        }
                     }
 
                     patch::TaskContext::GetPatcher(_) => {
@@ -198,6 +204,14 @@ impl Installer {
                 },
 
                 StatusType::Error(ctx) => match ctx {
+                    patch::TaskContext::GetManifest(ctx) => {
+                        if ctx.out_outdated {
+                            self.state = InstallerState::Outdated
+                        } else {
+                            self.state = InstallerState::Error
+                        }
+                    }
+
                     patch::TaskContext::InstallMod(ctx) => {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Uninstalled;

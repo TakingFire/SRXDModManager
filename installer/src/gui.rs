@@ -1,13 +1,15 @@
+use std::{collections::HashSet, time::Duration};
+
 use eframe::egui::{
     self, CentralPanel, Color32, ComboBox, Context, Frame, Id, Modal, OpenUrl, RichText,
     ScrollArea, SidePanel, TextEdit, TopBottomPanel,
 };
-use std::{collections::HashSet, time::Duration};
 
 use crate::app::{Installer, InstallerState, ModEntry, ModEntryRef, ModEntryState};
 
 #[allow(unused)]
 const GUIDE_URL: &str = "https://useredge.github.io/spinshare-wiki/modding/installation-guide/";
+const UPDATE_URL: &str = "https://github.com/TakingFire/SRXDModManager/releases/latest";
 const ISSUES_URL: &str = "https://github.com/TakingFire/SRXDModManager/issues/new";
 
 #[derive(Default)]
@@ -80,13 +82,17 @@ impl eframe::App for Gui {
             self.installer.force_ui_update = false;
         }
 
-        #[cfg(not(target_os = "windows"))]
-        if self.show_linux_guide {
-            self.draw_linux_guide(ctx, frame);
-        }
+        if matches!(self.installer.state, InstallerState::Outdated) {
+            self.draw_outdated_warning(ctx);
+        } else {
+            #[cfg(not(target_os = "windows"))]
+            if self.show_linux_guide {
+                self.draw_linux_guide(ctx, frame);
+            }
 
-        if self.show_disclaimer && !self.show_linux_guide {
-            self.draw_disclaimer(ctx, frame);
+            if self.show_disclaimer && !self.show_linux_guide {
+                self.draw_disclaimer(ctx, frame);
+            }
         }
 
         if matches!(self.installer.state, InstallerState::Error) {
@@ -106,6 +112,25 @@ impl eframe::App for Gui {
 }
 
 impl Gui {
+    fn draw_outdated_warning(&mut self, ctx: &Context) {
+        Modal::new(Id::new("ui_disclaimer")).show(ctx, |ui| {
+            ui.set_width(240.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new("Update Available").size(18.0));
+                ui.label(
+                    "This version may no longer be compatible. Please get the latest version here:",
+                );
+                ui.hyperlink_to("Download Page", UPDATE_URL);
+
+                ui.add_space(8.0);
+                if ui.button("Try Anyway").clicked() {
+                    self.installer.state = InstallerState::Init;
+                    self.installer.get_patcher();
+                }
+            });
+        });
+    }
+
     fn draw_disclaimer(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
         Modal::new(Id::new("ui_disclaimer")).show(ctx, |ui| {
             ui.set_width(220.0);

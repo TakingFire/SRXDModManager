@@ -23,6 +23,7 @@ eframe = { version = "0.33.3", default-features = false, features = [
 ] }
 flume = "0.12.0"
 model = { path = "../model" }
+natord = "1.0.9"
 open = "5.3.5"
 parking_lot = "0.12.5"
 reqwest = { version = "0.13.1", default-features = false, features = [
