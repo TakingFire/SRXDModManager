@@ -75,13 +75,27 @@ async fn build_manifest() -> anyhow::Result<()> {
 
     println!("Loading plugins");
 
+    for i in 0..manifest.mods.len() {
+        let mod_entry = &manifest.mods[i];
+        if template
+            .mods
+            .iter()
+            .find(|template| template.id == mod_entry.id)
+            .is_none()
+        {
+            println!("Removing {}", mod_entry.id);
+            manifest.mods.swap_remove(i);
+        }
+    }
+
     for mod_template in template.mods {
         if manifest
             .mods
             .iter()
-            .find(|existing| existing.id == mod_template.id)
+            .find(|entry| entry.id == mod_template.id)
             .is_none()
         {
+            println!("Adding {}", mod_template.id);
             manifest.mods.push(mod_template);
         }
     }
