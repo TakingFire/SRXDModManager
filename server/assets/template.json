@@ -261,15 +261,6 @@
       "repository": "SRXDTweaks",
       "file": "MoreTrackSpeeds.dll",
       "categories": ["Utility"]
-    },
-    {
-      "id": "TakingFire_TouchableMedals",
-      "name": "Touchable Medals",
-      "description": "Adds cursor interaction to medals",
-      "author": "TakingFire",
-      "repository": "SRXDTweaks",
-      "file": "TouchableMedals.dll",
-      "categories": ["Appearance"]
     }
   ]
 }
