@@ -532,7 +532,7 @@ impl Gui {
                     .entry
                     .name
                     .to_ascii_lowercase()
-                    .starts_with(self.search.to_ascii_lowercase().trim())
+                    .contains(self.search.to_ascii_lowercase().trim())
             })
             .filter(|entry| match self.filter_by {
                 FilterBy::All => true,
