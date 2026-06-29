@@ -1,0 +1,277 @@
+# TEMPLATE FORMAT
+#
+# [[mods]]    : Required header.
+#
+# name        : Display name for the mod.
+# author      : Display name for the author.
+# description : A short description of the mod's function.
+# repository  : URL for the plugin repository.
+# provider    : Repository provider, "GitHub".
+# file        : Name of the plugin file in each Release. Supports wildcards (*).
+#
+# categories (optional)   : List of applicable categories. Recommended:
+#                           "Appearance", "Charting", "Integrations", or "Utility"
+# dependencies (optional) : List of dependency IDs. Format IDs as "AUTHOR_MODNAME"
+#                           with no spaces. Example: "Raoul1808_SpinCore".
+
+[[mods]]
+name = "SpinCore"
+author = "Raoul1808"
+description = "Utility and UI functions for other mods"
+repository = "https://github.com/Raoul1808/SpinCore"
+provider = "GitHub"
+file = "SpinCore.zip"
+categories = ["Utility"]
+
+[[mods]]
+name = "Wow So Secret"
+author = "Raoul1808"
+description = "Hide or replace Discord status text"
+repository = "https://github.com/Raoul1808/WowSoSecret"
+provider = "GitHub"
+file = "WowSoSecret.dll"
+categories = ["Utility"]
+
+[[mods]]
+name = "Speen Chroma 2"
+author = "Raoul1808"
+description = "Dynamic per-chart color effects"
+repository = "https://github.com/Raoul1808/SpeenChroma2"
+provider = "GitHub"
+file = "SpeenChroma2.dll"
+categories = ["Charting", "Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "Dynamic Track Speed"
+author = "Raoul1808"
+description = "Dynamic per-chart track speed"
+repository = "https://github.com/Raoul1808/DynamicTrackSpeed"
+provider = "GitHub"
+file = "DynamicTrackSpeed.dll"
+categories = ["Charting", "Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "Force Combo"
+author = "Raoul1808"
+description = "Automatically restart when streak is broken"
+repository = "https://github.com/Raoul1808/ForceCombo"
+provider = "GitHub"
+file = "ForceCombo.dll"
+categories = ["Utility"]
+
+[[mods]]
+name = "Chart Helper"
+author = "SRXDModdingGroup"
+description = "Library for loading and parsing chart files"
+repository = "https://github.com/SRXDModdingGroup/SRXDChartStatistics"
+provider = "GitHub"
+file = "ChartHelper.zip"
+categories = ["Utility"]
+
+[[mods]]
+name = "No Intro"
+author = "SRXDModdingGroup"
+description = "Skips the intro sequence"
+repository = "https://github.com/SRXDModdingGroup/NoIntro"
+provider = "GitHub"
+file = "NoIntro.dll"
+categories = ["Utility"]
+
+[[mods]]
+name = "Folder Switcher"
+author = "UserEdge"
+description = "Switch between multiple Customs directories"
+repository = "https://github.com/UserEdge/SRXDFolderSwitcher"
+provider = "GitHub"
+file = "SRXDFolderSwitcher.dll"
+categories = ["Charting", "Utility"]
+dependencies = ["Raoul1808_SpinCore", "SRXDModdingGroup_ChartHelper"]
+
+[[mods]]
+name = "Modern CTM"
+author = "UserEdge"
+description = "Click-to-move behavior from the Switch version"
+repository = "https://github.com/UserEdge/ModernCTM"
+provider = "GitHub"
+file = "ModernCTM.dll"
+categories = ["Utility"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "Editor Changes"
+author = "GaviGuy"
+description = "Extra functionality for the chart editor"
+repository = "https://github.com/GaviGuy/EditorChanges"
+provider = "GitHub"
+file = "EditorChanges.dll"
+categories = ["Charting"]
+dependencies = ["Raoul1808_SpinCore", "SRXDModdingGroup_ChartHelper"]
+
+[[mods]]
+name = "HitBar Move"
+author = "CxerizoBirb"
+description = "Customization options for the timing bar"
+repository = "https://github.com/CxerizoBirb/HitBarMove"
+provider = "GitHub"
+file = "HitBarMove.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "SpinShareLib"
+author = "SRXDModdingGroup"
+description = "SpinShare API utilities for other mods"
+repository = "https://github.com/SRXDModdingGroup/SpinShareLibSharp"
+provider = "GitHub"
+file = "SpinShareLib.dll"
+categories = ["Utility"]
+
+[[mods]]
+name = "SpinSpout"
+author = "TheBlackParrot"
+description = "Spout2 output for direct game capture"
+repository = "https://github.com/TheBlackParrot/SpinSpout"
+provider = "GitHub"
+file = "SpinSpout.dll"
+categories = ["Integrations"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "Additional VR Settings"
+author = "TheBlackParrot"
+description = "Additional settings for the VR view"
+repository = "https://github.com/TheBlackParrot/SRXD_AdditionalVRSettings"
+provider = "GitHub"
+file = "AdditionalVRSettings.dll"
+categories = ["Utility"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "SpinRequests"
+author = "TheBlackParrot"
+description = "In-game song request manager"
+repository = "https://github.com/TheBlackParrot/SpinRequests"
+provider = "GitHub"
+file = "SpinRequests*.zip"
+categories = ["Integrations"]
+dependencies = ["Raoul1808_SpinCore", "SRXDModdingGroup_SpinShareLib"]
+
+[[mods]]
+name = "SpinRequests Twitch Bridge"
+author = "TheBlackParrot"
+description = "Twitch integration for SpinRequests"
+repository = "https://github.com/TheBlackParrot/SpinRequestsTwitchBridge"
+provider = "GitHub"
+file = "SpinRequestsTwitchBridge*.zip"
+categories = ["Integrations"]
+dependencies = ["Raoul1808_SpinCore", "TheBlackParrot_SpinRequests"]
+
+[[mods]]
+name = "Custom Matcaps"
+author = "TheBlackParrot"
+description = "Replace track and wheel materials"
+repository = "https://github.com/TheBlackParrot/SRXD_CustomMatcaps"
+provider = "GitHub"
+file = "CustomMatcaps.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "SpinLists"
+author = "TheBlackParrot"
+description = "Customizable and shareable song playlists"
+repository = "https://github.com/TheBlackParrot/SpinLists"
+provider = "GitHub"
+file = "SpinLists.dll"
+categories = ["Charting", "Utility"]
+dependencies = ["Raoul1808_SpinCore", "SRXDModdingGroup_SpinShareLib"]
+
+[[mods]]
+name = "SpinShare Updater"
+author = "TheBlackParrot"
+description = "Automatically keep SpinShare charts up-to-date"
+repository = "https://github.com/TheBlackParrot/SpinShareUpdater"
+provider = "GitHub"
+file = "SpinShareUpdater.dll"
+categories = ["Charting", "Integrations"]
+dependencies = ["Raoul1808_SpinCore", "SRXDModdingGroup_SpinShareLib"]
+
+[[mods]]
+name = "Background Traversal"
+author = "TheBlackParrot"
+description = "Show selected chart backgrounds in the chart menu"
+repository = "https://github.com/TheBlackParrot/BackgroundTraversal"
+provider = "GitHub"
+file = "BackgroundTraversal.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "HUD Tweaks"
+author = "TheBlackParrot"
+description = "Expanded HUD customization options"
+repository = "https://github.com/TheBlackParrot/SRXD_HUDTweaks"
+provider = "GitHub"
+file = "HUDTweaks.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "Disable Film Grain"
+author = "TheBlackParrot"
+description = "Removes film grain post-processing"
+repository = "https://github.com/TheBlackParrot/SRXD_DisableFilmGrain"
+provider = "GitHub"
+file = "DisableFilmGrain.dll"
+categories = ["Appearance"]
+
+[[mods]]
+name = "Custom Menu Colors"
+author = "TheBlackParrot"
+description = "Custom palettes for UI and menus"
+repository = "https://github.com/TheBlackParrot/SRXD_CustomMenuColors"
+provider = "GitHub"
+file = "CustomMenuColors.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "QR Code Unlocker"
+author = "TheBlackParrot"
+description = "Allows QR codes to be used for custom charts"
+repository = "https://github.com/TheBlackParrot/SRXD_QRCodeUnlocker"
+provider = "GitHub"
+file = "QRCodeUnlocker.dll"
+categories = ["Charting", "Utility"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "Mute Twitch VOD Track"
+author = "TheBlackParrot"
+description = "Automatically toggle OBS tracks when selecting songs"
+repository = "https://github.com/TheBlackParrot/MuteTwitchVODTrack"
+provider = "GitHub"
+file = "MuteTwitchVODTrack*.zip"
+categories = ["Integrations"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "SpinStatus"
+author = "TakingFire"
+description = "Live game events for stream overlays"
+repository = "https://github.com/TakingFire/SpinStatus"
+provider = "GitHub"
+file = "SpinStatus.dll"
+categories = ["Integrations"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
+name = "More Track Speeds"
+author = "TakingFire"
+description = "Doubles the track speed limit to 120"
+repository = "https://github.com/TakingFire/SRXDTweaks"
+provider = "GitHub"
+file = "MoreTrackSpeeds.dll"
+categories = ["Utility"]

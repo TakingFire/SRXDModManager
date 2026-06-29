@@ -3,11 +3,15 @@ use std::{sync::LazyLock, time::Duration};
 use axum::{Json, Router, http::StatusCode, response::Redirect, routing::get};
 use futures::future::join_all;
 use indicatif::{MultiProgress, ProgressBar};
-use model::Manifest;
+use model::{Manifest, Mod};
 use tokio::{self, time::interval};
 
-use crate::template::{get_template_github, get_template_local};
+use crate::{
+    providers::{GitHub, Provider, ProviderType},
+    template::{ModTemplate, Template, get_template_github, get_template_local},
+};
 
+mod providers;
 mod template;
 
 static PORT: LazyLock<String> = LazyLock::new(|| std::env::var("PORT").unwrap_or("8080".into()));
@@ -17,6 +21,8 @@ const BEPINEX_URL: &str =
 
 #[tokio::main]
 async fn main() {
+    println!("USING PORT {}", *PORT);
+
     build_manifest()
         .await
         .expect("Failed to create manifest.json");
@@ -48,7 +54,7 @@ async fn get_bepinex() -> Redirect {
 }
 
 async fn get_mods() -> Result<Json<Manifest>, StatusCode> {
-    let file = tokio::fs::read_to_string("assets/manifest.json")
+    let file = tokio::fs::read_to_string("mods/manifest.json")
         .await
         .map_err(|_| StatusCode::INTERNAL_SERVER_ERROR)?;
 
@@ -59,7 +65,7 @@ async fn get_mods() -> Result<Json<Manifest>, StatusCode> {
 }
 
 async fn build_manifest() -> anyhow::Result<()> {
-    let template: Manifest = get_template_github()
+    let template: Template = get_template_github()
         .await
         .inspect_err(|_| eprintln!("Using fallback template"))
         .unwrap_or(
@@ -68,44 +74,31 @@ async fn build_manifest() -> anyhow::Result<()> {
                 .inspect_err(|_| eprintln!("Failed to read template.json"))?,
         );
 
-    let mut manifest = match tokio::fs::read_to_string("assets/manifest.json").await {
+    let mut manifest = match tokio::fs::read_to_string("mods/manifest.json").await {
         Ok(str) => serde_json::from_str(&str).unwrap_or_default(),
         Err(_) => Manifest::default(),
     };
 
     println!("Loading plugins");
 
-    for i in 0..manifest.mods.len() {
-        let mod_entry = &manifest.mods[i];
-        if template
-            .mods
-            .iter()
-            .find(|template| template.id == mod_entry.id)
-            .is_none()
-        {
-            println!("Removing {}", mod_entry.id);
-            manifest.mods.swap_remove(i);
-        }
-    }
+    let mut entry_map: Vec<(ModTemplate, Mod)> = template
+        .mods
+        .iter()
+        .map(|mod_template| {
+            let mut converted: Mod = mod_template.into();
+            (
+                mod_template.clone(),
+                manifest
+                    .mods
+                    .iter_mut()
+                    .find(|entry| entry.id == converted.id)
+                    .unwrap_or(&mut converted)
+                    .clone(),
+            )
+        })
+        .collect();
 
-    for mod_template in template.mods {
-        if manifest
-            .mods
-            .iter()
-            .find(|entry| entry.id == mod_template.id)
-            .is_none()
-        {
-            println!("Adding {}", mod_template.id);
-            manifest.mods.push(mod_template);
-        }
-    }
-
-    for mod_entry in &mut manifest.mods {
-        mod_entry.url = format!(
-            "https://github.com/{}/{}",
-            mod_entry.author, mod_entry.repository
-        );
-
+    for (_, mod_entry) in &entry_map {
         for category in &mod_entry.categories {
             if !manifest.categories.contains(category) {
                 manifest.categories.push(category.clone());
@@ -114,14 +107,22 @@ async fn build_manifest() -> anyhow::Result<()> {
     }
 
     let progress_bars = MultiProgress::new();
-    let plugins_progress = progress_bars.add(ProgressBar::new(manifest.mods.len() as u64));
+    let plugins_progress = progress_bars.add(ProgressBar::new(entry_map.len() as u64));
     let releases_progress = progress_bars.add(ProgressBar::new(0));
 
-    let tasks = manifest.mods.iter_mut().map(|mod_entry| {
+    let tasks = entry_map.iter_mut().map(|(mod_template, mod_entry)| {
         let releases_progress = releases_progress.clone();
         let plugins_progress = plugins_progress.clone();
         async move {
-            let _ = template::get_mod_releases(mod_entry, releases_progress).await;
+            let result = match mod_template.provider {
+                ProviderType::GitHub => GitHub::get_versions(mod_entry, releases_progress).await,
+            };
+
+            if let Err(err) = result {
+                eprintln!("{err}");
+                eprintln!("Failed to get versions for {}", mod_entry.id);
+            }
+
             plugins_progress.inc(1);
         }
     });
@@ -131,9 +132,15 @@ async fn build_manifest() -> anyhow::Result<()> {
     plugins_progress.finish_and_clear();
     releases_progress.finish_and_clear();
 
+    manifest.mods = entry_map
+        .iter()
+        .map(|(_, mod_entry)| mod_entry)
+        .cloned()
+        .collect();
+
     manifest.categories.sort();
 
-    tokio::fs::write("assets/manifest.json", serde_json::to_string(&manifest)?).await?;
+    tokio::fs::write("mods/manifest.json", serde_json::to_string(&manifest)?).await?;
 
     Ok(())
 }

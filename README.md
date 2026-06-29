@@ -11,8 +11,7 @@ Encounter a problem? Please [**create an issue**](https://github.com/TakingFire/
 
 ### Submitting Mods
 
-- Add your mod details to [this file](https://github.com/TakingFire/SRXDModManager/blob/main/server/assets/template.json) and open a Pull Request. 
-  - The `author` and `repository` fields must match the mod's repository URL. [^1]
+- Add your mod details to [this file](https://github.com/TakingFire/SRXDModManager/blob/main/server/mods/template.toml) and open a Pull Request. 
 - Your mod will appear in the mod manager within 30 minutes of the PR's approval.
 
 [^1]: GitHub only, Codeberg support coming soon

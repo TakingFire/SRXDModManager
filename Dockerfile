@@ -17,8 +17,8 @@ RUN cargo build --profile server --target x86_64-unknown-linux-musl --bin server
 
 FROM alpine AS runtime
 WORKDIR /app
-COPY --from=builder /app/server/assets ./assets
-RUN chown -R nobody:nobody /app/assets
+COPY --from=builder /app/server/mods ./mods
+RUN chown -R nobody:nobody /app/mods
 COPY --from=builder /app/target/x86_64-unknown-linux-musl/server/server /usr/local/bin/
 USER nobody
 EXPOSE 8080
