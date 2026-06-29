@@ -7,7 +7,7 @@ use model::{Manifest, Mod};
 use tokio::{self, time::interval};
 
 use crate::{
-    providers::{GitHub, Provider, ProviderType},
+    providers::{Forgejo, GitHub, Provider, ProviderType},
     template::{ModTemplate, Template, get_template_github, get_template_local},
 };
 
@@ -67,7 +67,10 @@ async fn get_mods() -> Result<Json<Manifest>, StatusCode> {
 async fn build_manifest() -> anyhow::Result<()> {
     let template: Template = get_template_github()
         .await
-        .inspect_err(|_| eprintln!("Using fallback template"))
+        .inspect_err(|err| {
+            eprintln!("{err}");
+            eprintln!("Using fallback template");
+        })
         .unwrap_or(
             get_template_local()
                 .await
@@ -116,6 +119,7 @@ async fn build_manifest() -> anyhow::Result<()> {
         async move {
             let result = match mod_template.provider {
                 ProviderType::GitHub => GitHub::get_versions(mod_entry, releases_progress).await,
+                ProviderType::Forgejo => Forgejo::get_versions(mod_entry, releases_progress).await,
             };
 
             if let Err(err) = result {

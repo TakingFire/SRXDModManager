@@ -53,6 +53,7 @@ pub async fn get_template_github() -> anyhow::Result<Template> {
     let template: Template = toml::from_str(
         &github::CLIENT
             .get(TEMPLATE_URL)
+            .bearer_auth(&(*github::TOKEN).clone().unwrap())
             .send()
             .await?
             .text()

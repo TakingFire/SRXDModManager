@@ -3,7 +3,7 @@ use model::Version;
 use serde::Deserialize;
 use std::sync::LazyLock;
 
-use crate::providers::{GitHub, Provider, get_host_and_repo, hash_file};
+use crate::providers::{Forgejo, Provider, get_host_and_repo, hash_file};
 
 pub type Releases = Vec<Release>;
 
@@ -18,39 +18,30 @@ pub struct Release {
 pub struct Asset {
     pub name: String,
     pub browser_download_url: String,
-    pub digest: Option<String>,
 }
 
-pub static TOKEN: LazyLock<Option<String>> =
-    LazyLock::new(|| std::env::var("GH_SERVER_TOKEN").ok());
-
 pub static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    let mut headers = HeaderMap::new();
-    headers.insert("Accept", "application/vnd.github+json".parse().unwrap());
-    headers.insert("User-Agent", "TakingFire-SRXD-Mod-Server".parse().unwrap());
-    headers.insert("X-GitHub-Api-Version", "2026-03-10".parse().unwrap());
+    let mut gh_headers = HeaderMap::new();
+    gh_headers.insert("Accept", "application/json".parse().unwrap());
 
     reqwest::Client::builder()
-        .default_headers(headers)
+        .default_headers(gh_headers)
         .build()
         .unwrap()
 });
 
-impl Provider for GitHub {
+impl Provider for Forgejo {
     async fn get_versions(
         entry: &mut model::Mod,
         progress: indicatif::ProgressBar,
     ) -> anyhow::Result<()> {
-        if TOKEN.is_none() {
-            eprintln!("Warning: GH_SERVER_TOKEN not set");
-            return Err(anyhow::anyhow!(""));
-        }
-
         let (host, repository) = get_host_and_repo(&entry.url)?;
 
         let releases: Releases = CLIENT
-            .get(format!("https://api.{}/repos{}/releases", host, repository))
-            .bearer_auth(&(*TOKEN.clone().unwrap()))
+            .get(format!(
+                "https://{}/api/v1/repos{}/releases",
+                host, repository
+            ))
             .send()
             .await?
             .json()
@@ -72,19 +63,14 @@ impl Provider for GitHub {
                 if wildmatch::WildMatch::new(&entry.file).matches(&asset.name) {
                     let sha256: String;
 
-                    if let Some(digest) = asset.digest {
-                        sha256 = (&digest)[7..].into();
-                    } else {
-                        let file = CLIENT
-                            .get(asset.browser_download_url.clone())
-                            .bearer_auth(&*TOKEN.clone().unwrap())
-                            .send()
-                            .await?
-                            .bytes()
-                            .await?;
+                    let file = CLIENT
+                        .get(asset.browser_download_url.clone())
+                        .send()
+                        .await?
+                        .bytes()
+                        .await?;
 
-                        sha256 = hash_file(file);
-                    }
+                    sha256 = hash_file(file);
 
                     entry.versions.push(Version {
                         name: release.tag_name.clone(),

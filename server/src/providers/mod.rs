@@ -4,14 +4,17 @@ use model::Mod;
 use serde::{Deserialize, Serialize};
 use sha2::Digest;
 
+pub mod forgejo;
 pub mod github;
 
 pub struct GitHub;
+pub struct Forgejo;
 
 #[derive(Serialize, Deserialize, Default, Debug, Clone)]
 pub enum ProviderType {
     #[default]
     GitHub,
+    Forgejo,
 }
 
 pub trait Provider {

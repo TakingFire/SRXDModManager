@@ -6,7 +6,7 @@
 # author      : Display name for the author.
 # description : A short description of the mod's function.
 # repository  : URL for the plugin repository.
-# provider    : Repository provider, "GitHub".
+# provider    : Repository provider, "GitHub" OR "Forgejo".
 # file        : Name of the plugin file in each Release. Supports wildcards (*).
 #
 # categories (optional)   : List of applicable categories. Recommended:
