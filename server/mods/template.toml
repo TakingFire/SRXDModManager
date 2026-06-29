@@ -24,6 +24,16 @@ file = "SpinCore.zip"
 categories = ["Utility"]
 
 [[mods]]
+name = "Disable Dome HUD"
+author = "Raoul1808"
+description = "Fully hide the in-game HUD"
+repository = "https://codeberg.org/Raoul1808/DisableDomeHud"
+provider = "Forgejo"
+file = "DisableDomeHud.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
 name = "Wow So Secret"
 author = "Raoul1808"
 description = "Hide or replace Discord status text"
