@@ -105,7 +105,7 @@ impl Installer {
         self.state = InstallerState::Init;
         self.log.clear();
         self.log
-            .push(patch::MessageType::Default("Starting".into()));
+            .push(patch::MessageType::default(t!("status.starting")));
         self.get_directories();
     }
 
@@ -156,30 +156,30 @@ impl Installer {
                             }
                         }
 
-                        self.log(MessageType::Success(format!(
-                            "{} Mod(s) Installed",
-                            installed_count
+                        self.log(MessageType::success(t!(
+                            "status.mods_count",
+                            count = installed_count
                         )));
 
                         let unrecognized_count = ctx.out_digest_list.len() - installed_count;
 
                         if unrecognized_count > 0 {
-                            self.log(MessageType::Warning(format!(
-                                "{} Mods(s) Unrecognized",
-                                unrecognized_count
+                            self.log(MessageType::warning(t!(
+                                "warning.mod_unrecognized",
+                                count = unrecognized_count
                             )));
                         }
 
                         self.state = InstallerState::Ready;
-                        self.log(MessageType::Success("Ready".into()))
+                        self.log(MessageType::success(t!("status.ready")))
                     }
 
                     patch::TaskContext::InstallMod(ctx) => {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Installed;
-                            self.log(MessageType::Success(format!(
-                                "Installed {}",
-                                ctx.entry.entry.id
+                            self.log(MessageType::success(t!(
+                                "status.mod_install",
+                                name = ctx.entry.entry.id
                             )));
                         }
                     }
@@ -276,9 +276,9 @@ impl Installer {
             })));
         }
 
-        self.log(MessageType::Success(format!(
-            "Loaded {} Mods",
-            self.mods.len()
+        self.log(MessageType::success(t!(
+            "status.mods_loaded",
+            count = self.mods.len()
         )));
     }
 
@@ -336,9 +336,9 @@ impl Installer {
 
     pub fn uninstall_mod(&mut self, entry: &mut ModEntry) {
         if entry.active_dependents > 0 {
-            self.log(MessageType::Warning(format!(
-                "This mod is required by {} installed mod(s)",
-                entry.active_dependents
+            self.log(MessageType::warning(t!(
+                "warning.mod_required",
+                count = entry.active_dependents
             )));
             return;
         }

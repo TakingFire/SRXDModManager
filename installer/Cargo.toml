@@ -30,6 +30,7 @@ reqwest = { version = "0.13.1", default-features = false, features = [
   "http2",
   "native-tls"
 ] }
+rust-i18n = "4.1.0"
 serde_json = "1.0.150"
 steamlocate = "2.0.1"
 tokio = { version = "1.52.3", default-features = false, features = [

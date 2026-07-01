@@ -78,6 +78,22 @@ pub enum MessageType {
 }
 
 impl MessageType {
+    pub fn default(msg: impl Into<String>) -> Self {
+        Self::Default(msg.into())
+    }
+
+    pub fn success(msg: impl Into<String>) -> Self {
+        Self::Success(msg.into())
+    }
+
+    pub fn warning(msg: impl Into<String>) -> Self {
+        Self::Warning(msg.into())
+    }
+
+    pub fn error(msg: impl Into<String>) -> Self {
+        Self::Error(msg.into())
+    }
+
     pub fn text(&self) -> RichText {
         match self {
             MessageType::Default(s) => RichText::new(s),
@@ -102,27 +118,27 @@ fn send_task_result(result: Result<(), MessageType>, ctx: TaskContext, tx: Sende
 
 pub fn get_directories(mut ctx: GetDirectoriesContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
-        let _ = tx.send(StatusType::Message(MessageType::Default(
-            "Locating Directories".into(),
-        )));
+        let _ = tx.send(StatusType::Message(MessageType::default(t!(
+            "status.dirs_scan"
+        ))));
 
         let result = || -> Result<(), MessageType> {
             ctx.out_directories.app_dir = Some(
                 eframe::storage_dir("SRXD Mod Manager")
-                    .ok_or(MessageType::Error("Unknown App Directory".into()))?,
+                    .ok_or(MessageType::error(t!("error.app_dir")))?,
             );
 
             let steam = steamlocate::SteamDir::locate()
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Unknown Steam Directory".into()))?;
+                .map_err(|_| MessageType::error(t!("error.steam_dir")))?;
 
             ctx.out_directories.steam_dir = Some(steam.path().to_path_buf());
 
             let (game, game_lib) = steam
                 .find_app(GAME_ID)
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Unknown Game Directory".into()))?
-                .ok_or(MessageType::Error("Unknown Game Directory".into()))?;
+                .map_err(|_| MessageType::error(t!("error.game_dir")))?
+                .ok_or(MessageType::error(t!("error.game_dir")))?;
 
             ctx.out_directories.game_dir = Some(game_lib.resolve_app_dir(&game));
 
@@ -160,42 +176,42 @@ pub fn get_patcher(ctx: GetPatcherContext, tx: Sender<StatusType>) {
             if fs::try_exists(patcher_dir)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Read Path".into()))?
+                .map_err(|_| MessageType::error(t!("error.path_locate")))?
             {
-                let _ = tx.send(StatusType::Message(MessageType::Default(
-                    "Found Patcher".into(),
-                )));
+                let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                    "status.patcher_found"
+                ))));
 
                 return Ok(());
             }
 
-            let _ = tx.send(StatusType::Message(MessageType::Default(
-                "Downloading Patcher".into(),
-            )));
+            let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                "status.patcher_dl"
+            ))));
 
             let download = reqwest::get(PATCHER_URL)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Download Failed".into()))?;
+                .map_err(|_| MessageType::error(t!("error.download")))?;
 
             let mut archive = zip::ZipArchive::new(std::io::Cursor::new(
                 download
                     .bytes()
                     .await
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Read Data".into()))?,
+                    .map_err(|_| MessageType::error(t!("error.file_read")))?,
             ))
             .inspect_err(|e| eprintln!("{}", e))
-            .map_err(|_| MessageType::Error("Failed to Read Archive".into()))?;
+            .map_err(|_| MessageType::error(t!("error.zip_read")))?;
 
-            let _ = tx.send(StatusType::Message(MessageType::Default(
-                "Extracting Archive".into(),
-            )));
+            let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                "status.zip_extract"
+            ))));
 
             archive
                 .extract(ctx.directories.app_dir.as_ref().unwrap())
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Extract Archive".into()))?;
+                .map_err(|_| MessageType::error(t!("error.zip_extract")))?;
 
             Ok(())
         }()
@@ -207,23 +223,23 @@ pub fn get_patcher(ctx: GetPatcherContext, tx: Sender<StatusType>) {
 
 pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
-        let _ = tx.send(StatusType::Message(MessageType::Default(
-            "Fetching Mod List".into(),
-        )));
+        let _ = tx.send(StatusType::Message(MessageType::default(t!(
+            "status.mods_fetch"
+        ))));
 
         let result = async || -> Result<(), MessageType> {
             let res = reqwest::get(MANIFEST_URL)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Server Request Failed".into()))?
+                .map_err(|_| MessageType::error(t!("error.web_request")))?
                 .text()
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|err| MessageType::Error(err.to_string()))?;
+                .map_err(|err| MessageType::error(err.to_string()))?;
 
             let manifest: Value = serde_json::from_str(&res)
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Read File".into()))?;
+                .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
             ctx.out_outdated = manifest
                 .get("version")
@@ -238,7 +254,7 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
 
             ctx.out_manifest = serde_json::from_value(manifest)
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Read Mod List".into()))?;
+                .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
             Ok(())
         }()
@@ -250,9 +266,9 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
 
 pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
-        let _ = tx.send(StatusType::Message(MessageType::Default(
-            "Scanning Directory".into(),
-        )));
+        let _ = tx.send(StatusType::Message(MessageType::default(t!(
+            "status.mods_scan"
+        ))));
 
         let result = async || -> Result<(), MessageType> {
             let plugins_dir = ctx
@@ -266,18 +282,18 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
             fs::create_dir_all(&plugins_dir)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Create Folder".into()))?;
+                .map_err(|_| MessageType::error(t!("error.path_create")))?;
 
             let mut entries = fs::read_dir(plugins_dir)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Open Folder".into()))?;
+                .map_err(|_| MessageType::error(t!("error.path_open")))?;
 
             while let Some(entry) = entries
                 .next_entry()
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Read Mods".into()))?
+                .map_err(|_| MessageType::error(t!("error.file_read")))?
             {
                 ctx.out_digest_list
                     .push(entry.file_name().to_string_lossy().into());
@@ -293,9 +309,9 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
 
 pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
-        let _ = tx.send(StatusType::Message(MessageType::Default(format!(
-            "Downloading {}",
-            ctx.entry.entry.id
+        let _ = tx.send(StatusType::Message(MessageType::default(t!(
+            "status.mod_download",
+            name = ctx.entry.entry.id
         ))));
 
         let result = async || -> Result<(), MessageType> {
@@ -314,17 +330,17 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
             fs::create_dir_all(&plugin_dir)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Read Path".into()))?;
+                .map_err(|_| MessageType::error(t!("error.path_create")))?;
 
             let download = reqwest::get(version.url.to_owned())
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Download Failed".into()))?;
+                .map_err(|_| MessageType::error(t!("error.download")))?;
 
             match plugin_name
                 .split(".")
                 .last()
-                .ok_or(MessageType::Error("Unknown File Format".into()))?
+                .ok_or(MessageType::error(t!("error.file_format")))?
             {
                 "zip" => {
                     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(
@@ -332,15 +348,15 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                             .bytes()
                             .await
                             .inspect_err(|e| eprintln!("{}", e))
-                            .map_err(|_| MessageType::Error("Failed to Read Data".into()))?,
+                            .map_err(|_| MessageType::error(t!("error.file_read")))?,
                     ))
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Read Archive".into()))?;
+                    .map_err(|_| MessageType::error(t!("error.zip_read")))?;
 
                     archive
                         .extract(&plugin_dir)
                         .inspect_err(|e| eprintln!("{}", e))
-                        .map_err(|_| MessageType::Error("Failed to Extract Archive".into()))?;
+                        .map_err(|_| MessageType::error(t!("error.zip_extract")))?;
                 }
 
                 "dll" => {
@@ -350,11 +366,11 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                             .bytes()
                             .await
                             .inspect_err(|e| eprintln!("{}", e))
-                            .map_err(|_| MessageType::Error("Failed to Read Data".into()))?,
+                            .map_err(|_| MessageType::error(t!("error.file_read")))?,
                     )
                     .await
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Write Data".into()))?;
+                    .map_err(|_| MessageType::error(t!("error.file_write")))?;
                 }
                 _ => {}
             }
@@ -369,9 +385,9 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
 
 pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
-        let _ = tx.send(StatusType::Message(MessageType::Default(format!(
-            "Removing {}",
-            ctx.entry.entry.id
+        let _ = tx.send(StatusType::Message(MessageType::default(t!(
+            "status.mod_remove",
+            name = ctx.entry.entry.id
         ))));
 
         let result = async || -> Result<(), MessageType> {
@@ -394,7 +410,7 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
             fs::remove_dir_all(&plugin_dir)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Remove File".into()))?;
+                .map_err(|_| MessageType::error(t!("error.file_delete")))?;
 
             Ok(())
         }()
@@ -407,9 +423,9 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
 pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let _ = tx.send(StatusType::Message(MessageType::Default(
-                "Setting Config".into(),
-            )));
+            let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                "status.set_config"
+            ))));
 
             let app_dir = ctx.directories.app_dir.as_ref().unwrap();
             let game_dir = ctx.directories.game_dir.as_ref().unwrap();
@@ -425,7 +441,7 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
             doorstop
                 .load(app_dir.join("doorstop_config.ini"))
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Read Config".into()))?;
+                .map_err(|_| MessageType::error(t!("error.config_read")))?;
 
             doorstop.set(
                 "General",
@@ -441,13 +457,13 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
             doorstop
                 .write(app_dir.join("doorstop_config.ini"))
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Write Config".into()))?;
+                .map_err(|_| MessageType::error(t!("error.config_write")))?;
 
             #[cfg(target_os = "linux")]
             'regedit: {
-                let _ = tx.send(StatusType::Message(MessageType::Default(
-                    "Setting Override".into(),
-                )));
+                let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                    "status.override_set"
+                ))));
 
                 let reg_dir = steam_dir
                     .join("steamapps")
@@ -457,54 +473,54 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
                     .join("user.reg");
 
                 if !fs::try_exists(&reg_dir).await.unwrap_or(false) {
-                    let _ = tx.send(StatusType::Message(MessageType::Warning(
-                        "Failed to Find Config".into(),
-                    )));
+                    let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+                        "error.config_locate"
+                    ))));
 
                     break 'regedit;
                 }
 
                 let reg = regashii::Registry::deserialize_file(&reg_dir)
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Read Config".into()))?
+                    .map_err(|_| MessageType::error(t!("error.config_read")))?
                     .with(
                         r"Software\Wine\DllOverrides",
                         regashii::Key::new()
-                            .with("winhttp", regashii::Value::Sz("native,builtin".into()))
-                            .with("*winhttp", regashii::Value::Sz("native,builtin".into())),
+                            .with("winhttp", regashii::Value::Sz("native,builtin"))
+                            .with("*winhttp", regashii::Value::Sz("native,builtin")),
                     );
 
                 reg.serialize_file(&reg_dir)
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Write Config".into()))?;
+                    .map_err(|_| MessageType::error(t!("error.config_write")))?;
             }
 
-            let _ = tx.send(StatusType::Message(MessageType::Default(
-                "Copying Files".into(),
-            )));
+            let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                "status.files_copy"
+            ))));
 
             let base_dir_exists = fs::try_exists(&base_dir).await.unwrap_or(false);
             let base_renamed_dir_exists = fs::try_exists(&base_renamed_dir).await.unwrap_or(false);
             let mono_dir_exists = fs::try_exists(&mono_dir).await.unwrap_or(false);
 
             if !base_dir_exists {
-                return Err(MessageType::Error("Failed to Find UnityPlayer".into()));
+                return Err(MessageType::error(t!("error.file_locate")));
             }
 
             if mono_dir_exists {
                 fs::rename(&base_dir, &base_renamed_dir)
                     .await
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Rename UnityPlayer".into()))?;
+                    .map_err(|_| MessageType::error(t!("error.file_rename")))?;
 
                 fs::rename(&mono_dir, &base_dir)
                     .await
                     .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::Error("Failed to Rename UnityPlayer".into()))?;
+                    .map_err(|_| MessageType::error(t!("error.file_rename")))?;
             } else if !base_renamed_dir_exists {
-                let _ = tx.send(StatusType::Message(MessageType::Warning(
-                    "UnityPlayers in Unexpected State".into(),
-                )));
+                let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+                    "warning.unityplayer"
+                ))));
             }
 
             fs::copy(
@@ -513,12 +529,12 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
             )
             .await
             .inspect_err(|e| eprintln!("{}", e))
-            .map_err(|_| MessageType::Error("Failed to Copy File".into()))?;
+            .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
             fs::copy(app_dir.join("winhttp.dll"), game_dir.join("winhttp.dll"))
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Copy File".into()))?;
+                .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
             Ok(())
         }()
@@ -531,9 +547,9 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
 pub fn unpatch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let _ = tx.send(StatusType::Message(MessageType::Default(
-                "Removing Patch Files".into(),
-            )));
+            let _ = tx.send(StatusType::Message(MessageType::default(t!(
+                "status.files_remove"
+            ))));
 
             let game_dir = ctx.directories.game_dir.as_ref().unwrap();
 
@@ -551,9 +567,9 @@ pub fn unpatch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
 pub fn launch_game(ctx: LaunchGameContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let _ = tx.send(StatusType::Message(MessageType::Success(
-                "Launching Game".into(),
-            )));
+            let _ = tx.send(StatusType::Message(MessageType::success(t!(
+                "status.launch_game"
+            ))));
 
             let steam_dir = ctx.directories.steam_dir.as_ref().unwrap();
 
@@ -566,7 +582,7 @@ pub fn launch_game(ctx: LaunchGameContext, tx: Sender<StatusType>) {
                 .args(["-applaunch", &GAME_ID.to_string()])
                 .spawn()
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::Error("Failed to Launch Game".into()))?;
+                .map_err(|_| MessageType::error(t!("error.launch_game")))?;
 
             tokio::time::sleep(Duration::from_secs(4)).await;
 

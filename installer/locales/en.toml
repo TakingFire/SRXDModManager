@@ -1,0 +1,105 @@
+[button]
+run_modded = "Run (Modded)"
+run_vanilla = "Run (Vanilla)"
+open_folder = "Open Plugins Folder"
+disable_popup = "Don't show again"
+
+[label]
+categories = "Categories"
+output = "Output"
+sort = "Sort:"
+search = "Search"
+category_all = "All Mods"
+
+[config.filter]
+all = "All"
+installed = "Installed"
+uninstalled = "Uninstalled"
+
+[config.sort]
+recent = "Recent"
+title = "Title"
+author = "Author"
+
+[modentry.button]
+install = "Install"
+downloading = "Downloading"
+uninstall = "Uninstall"
+removing = "Removing"
+update = "Update"
+
+[popup.outdated]
+title = "Update Required"
+text = "This version may no longer be compatible. Please get the latest version here:"
+link = "Download Page"
+button = "Run Anyway"
+
+[popup.disclaimer]
+title = "Warning"
+text = "Mod releases are not actively verified. Download at your own risk."
+button = "I Understand"
+
+[popup.linux]
+title = "Linux Modding"
+text1 = "You must run the Windows game build via Proton. For instructions, follow Step 0 here:"
+link = "SpinShare Modding Guide"
+text2 = "and restart this program. (If you are already using Proton, you may disregard this)"
+button = "Close"
+
+[popup.error]
+text = "Something went wrong (see output for details)"
+btn_retry = "Retry"
+btn_report = "Report an issue"
+
+[popup.mod_update]
+text = "Update available for %{count} mod(s)!"
+btn_show = "Show"
+btn_update = "Update All"
+
+[status]
+ready = "Ready"
+starting = "Starting"
+dirs_scan = "Locating Directories"
+patcher_found = "Found Patcher"
+patcher_dl = "Downloading Patcher"
+zip_extract = "Extracting Archive"
+mods_fetch = "Fetching Mod List"
+mods_scan = "Scanning Directory"
+mods_loaded = "Loaded %{count} Mods"
+mods_count = "%{count} Mod(s) Installed"
+mod_download = "Downloading %{name}"
+mod_install = "Installed %{name}"
+mod_remove = "Removing %{name}"
+config_set = "Setting Config"
+override_set = "Setting Override"
+files_copy = "Copying Files"
+files_remove = "Removing Patch Files"
+launch_game = "Launching Game"
+
+[warning]
+mod_unrecognized = "%{count} Mods(s) Unrecognized"
+mod_required = "This mod is required by %{count} mod(s)"
+unityplayer = "UnityPlayer Renamed or Missing"
+
+[error]
+app_dir = "Unknown App Directory"
+steam_dir = "Unknown Steam Directory"
+game_dir = "Unknown Game Directory"
+web_request = "Server Request Failed"
+download = "Download Failed"
+zip_read = "Failed to Read Archive"
+zip_extract = "Failed to Extract Archive"
+path_locate = "Failed to Find Path"
+path_create = "Failed to Create Folder"
+path_open = "Failed to Open Folder"
+file_locate = "Failed to Find File"
+file_copy = "Failed to Copy File"
+file_read = "Failed to Read Data"
+file_write = "Failed to Write Data"
+file_rename = "Failed to Rename File"
+file_delete = "Failed to Remove File"
+file_format = "Unknown File Format"
+config_locate = "Failed to Find Config"
+config_read = "Filed to Read Config"
+config_write = "Failed to Write Config"
+launch_game = "Failed to Launch Game"

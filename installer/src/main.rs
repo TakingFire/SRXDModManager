@@ -4,6 +4,10 @@ mod app;
 mod gui;
 mod patch;
 
+#[macro_use]
+extern crate rust_i18n;
+i18n!("locales", fallback = "en");
+
 use crate::app::Installer;
 use crate::gui::Gui;
 

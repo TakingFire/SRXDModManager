@@ -116,14 +116,12 @@ impl Gui {
         Modal::new(Id::new("ui_disclaimer")).show(ctx, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new("Update Available").size(18.0));
-                ui.label(
-                    "This version may no longer be compatible. Please get the latest version here:",
-                );
-                ui.hyperlink_to("Download Page", UPDATE_URL);
+                ui.label(RichText::new(t!("popup.outdated.title")).size(18.0));
+                ui.label(t!("popup.outdated.text"));
+                ui.hyperlink_to(t!("popup.outdated.link"), UPDATE_URL);
 
                 ui.add_space(8.0);
-                if ui.button("Try Anyway").clicked() {
+                if ui.button(t!("popup.outdated.button")).clicked() {
                     self.installer.state = InstallerState::Init;
                     self.installer.get_patcher();
                 }
@@ -135,13 +133,13 @@ impl Gui {
         Modal::new(Id::new("ui_disclaimer")).show(ctx, |ui| {
             ui.set_width(220.0);
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new("Warning").size(18.0));
-                ui.label("Mod releases are not actively verified. Download at your own risk.");
+                ui.label(RichText::new(t!("popup.disclaimer.title")).size(18.0));
+                ui.label(t!("popup.disclaimer.text"));
 
                 ui.add_space(8.0);
-                ui.checkbox(&mut self.disclaimer_checkbox, "Don't show again");
+                ui.checkbox(&mut self.disclaimer_checkbox, t!("button.disable_popup"));
 
-                if ui.button("I Understand").clicked() {
+                if ui.button(t!("popup.disclaimer.button")).clicked() {
                     self.show_disclaimer = false;
                     if self.disclaimer_checkbox
                         && let Some(storage) = frame.storage_mut()
@@ -158,17 +156,18 @@ impl Gui {
         Modal::new(Id::new("ui_linux_guide")).show(ctx, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
-                ui.label(RichText::new("Linux Modding").size(18.0));
+                ui.label(RichText::new(t!("popup.linux.title")).size(18.0));
                 ui.vertical_centered(|ui| {
-                    ui.label("You must run the Windows game build via Proton. For instructions, follow Step 0 here:");
-                    ui.hyperlink_to("SpinShare Modding Guide", GUIDE_URL).on_hover_text(GUIDE_URL);
-                    ui.label("and restart this program. (If you are already using Proton, you may disregard this)");
+                    ui.label(t!("popup.linux.text1"));
+                    ui.hyperlink_to(t!("popup.linux.link"), GUIDE_URL)
+                        .on_hover_text(GUIDE_URL);
+                    ui.label(t!("popup.linux.text2"));
                 });
 
                 ui.add_space(8.0);
-                ui.checkbox(&mut self.linux_guide_checkbox, "Don't show again");
+                ui.checkbox(&mut self.linux_guide_checkbox, t!("button.disable_popup"));
 
-                if ui.button("Close").clicked() {
+                if ui.button(t!("popup.linux.button")).clicked() {
                     self.show_linux_guide = false;
                     if self.linux_guide_checkbox
                         && let Some(storage) = frame.storage_mut()
@@ -185,14 +184,11 @@ impl Gui {
             .exact_height(28.0)
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.label(
-                        RichText::new("Something went wrong (see output for details)")
-                            .color(Color32::RED),
-                    );
-                    if ui.small_button("Retry").clicked() {
+                    ui.label(RichText::new(t!("popup.error.text")).color(Color32::RED));
+                    if ui.small_button(t!("popup.error.btn_retry")).clicked() {
                         self.installer.init();
                     }
-                    if ui.small_button("Report an issue").clicked() {
+                    if ui.small_button(t!("popup.error.btn_report")).clicked() {
                         ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
                     }
                 });
@@ -205,17 +201,17 @@ impl Gui {
             .show(ctx, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
-                        RichText::new(format!(
-                            "Update available for {} mod(s)!",
-                            self.updatable_mods.len()
+                        RichText::new(t!(
+                            "popup.mod_update.text",
+                            count = self.updatable_mods.len()
                         ))
                         .color(Color32::from_rgb(90, 170, 255)),
                     );
-                    if ui.small_button("Show").clicked() {
+                    if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
                         self.filter_by = FilterBy::Updatable;
                         self.installer.force_ui_update = true;
                     }
-                    if ui.small_button("Update All").clicked() {
+                    if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
                         for entry in &self.updatable_mods {
                             self.installer.update_mod(&mut entry.clone().borrow_mut());
                         }
@@ -238,13 +234,13 @@ impl Gui {
                             matches!(self.installer.state, InstallerState::Ready),
                             |ui| {
                                 if ui
-                                    .button(RichText::new("Run (Modded)").size(16.0))
+                                    .button(RichText::new(t!("button.run_modded")).size(16.0))
                                     .clicked()
                                 {
                                     self.installer.patch_game_files();
                                 };
                                 if ui
-                                    .button(RichText::new("Run (Vanilla)").size(16.0))
+                                    .button(RichText::new(t!("button.run_vanilla")).size(16.0))
                                     .clicked()
                                 {
                                     self.installer.unpatch_game_files();
@@ -253,12 +249,15 @@ impl Gui {
                         );
 
                         ui.add_space(4.0);
-                        ui.label(RichText::new("Categories").size(16.0));
+                        ui.label(RichText::new(t!("label.categories")).size(16.0));
                         Frame::group(ui.style())
                             .fill(ui.visuals().window_fill + Color32::from_gray(6))
                             .show(ui, |ui| {
                                 if ui
-                                    .toggle_value(&mut self.categories.is_empty(), "All Mods")
+                                    .toggle_value(
+                                        &mut self.categories.is_empty(),
+                                        t!("label.category_all"),
+                                    )
                                     .clicked()
                                 {
                                     self.categories.clear();
@@ -283,7 +282,7 @@ impl Gui {
                             });
 
                         ui.add_space(4.0);
-                        ui.label(RichText::new("Output").size(16.0));
+                        ui.label(RichText::new(t!("label.output")).size(16.0));
                         Frame::group(ui.style())
                             .fill(ui.visuals().window_fill + Color32::from_gray(6))
                             .show(ui, |ui| {
@@ -303,7 +302,7 @@ impl Gui {
                         ui.add_enabled_ui(
                             matches!(self.installer.state, InstallerState::Ready),
                             |ui| {
-                                if ui.button("Open Plugins Folder").clicked() {
+                                if ui.button(t!("button.open_folder")).clicked() {
                                     let _ = open::that(
                                         self.installer
                                             .dirs
@@ -333,25 +332,52 @@ impl Gui {
                 .show(ui, |ui| {
                     ui.take_available_space();
                     ui.horizontal(|ui| {
-                        ui.selectable_value(&mut self.filter_by, FilterBy::All, "All");
-                        ui.selectable_value(&mut self.filter_by, FilterBy::Installed, "Installed");
+                        ui.selectable_value(
+                            &mut self.filter_by,
+                            FilterBy::All,
+                            t!("config.filter.all"),
+                        );
+                        ui.selectable_value(
+                            &mut self.filter_by,
+                            FilterBy::Installed,
+                            t!("config.filter.installed"),
+                        );
                         ui.selectable_value(
                             &mut self.filter_by,
                             FilterBy::Uninstalled,
-                            "Uninstalled",
+                            t!("config.filter.uninstalled"),
                         );
 
-                        ui.label("Sort:");
+                        ui.label(t!("label.sort"));
                         let _ = ComboBox::from_id_salt("ui_sort")
                             .width(80.0)
-                            .selected_text(format!("{:?}", self.sort_by))
+                            .selected_text(match self.sort_by {
+                                SortBy::Recent => t!("config.sort.recent"),
+                                SortBy::Title => t!("config.sort.title"),
+                                SortBy::Author => t!("config.sort.author"),
+                            })
                             .show_ui(ui, |ui| {
-                                ui.selectable_value(&mut self.sort_by, SortBy::Recent, "Recent");
-                                ui.selectable_value(&mut self.sort_by, SortBy::Title, "Title");
-                                ui.selectable_value(&mut self.sort_by, SortBy::Author, "Author");
+                                ui.selectable_value(
+                                    &mut self.sort_by,
+                                    SortBy::Recent,
+                                    t!("config.sort.recent"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.sort_by,
+                                    SortBy::Title,
+                                    t!("config.sort.title"),
+                                );
+                                ui.selectable_value(
+                                    &mut self.sort_by,
+                                    SortBy::Author,
+                                    t!("config.sort.author"),
+                                );
                             });
                         if ui
-                            .add(TextEdit::singleline(&mut self.search).hint_text("Search"))
+                            .add(
+                                TextEdit::singleline(&mut self.search)
+                                    .hint_text(t!("label.search")),
+                            )
                             .changed()
                         {
                             self.installer.force_ui_update = true;
@@ -432,11 +458,13 @@ impl Gui {
                         }
                         ui.set_width(button_width);
                         let button = ui.button(match entry.state {
-                            ModEntryState::Uninstalled => "Install",
-                            ModEntryState::PendingInstall => "Downloading",
-                            ModEntryState::Installed => "Uninstall",
-                            ModEntryState::PendingUninstall => "Removing",
-                            ModEntryState::PendingVersionChangeFrom(_) => "Update",
+                            ModEntryState::Uninstalled => t!("modentry.button.install"),
+                            ModEntryState::PendingInstall => t!("modentry.button.downlading"),
+                            ModEntryState::Installed => t!("modentry.button.uninstall"),
+                            ModEntryState::PendingUninstall => t!("modentry.button.removing"),
+                            ModEntryState::PendingVersionChangeFrom(_) => {
+                                t!("modentry.button.update")
+                            }
                         });
 
                         if button.clicked() {
