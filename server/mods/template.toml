@@ -159,6 +159,16 @@ categories = ["Utility"]
 dependencies = ["Raoul1808_SpinCore"]
 
 [[mods]]
+name = "Custom Fonts"
+author = "TheBlackParrot"
+description = "Use a custom font for menu text"
+repository = "https://git.gay/TheBlackParrot/SRXD_CustomFonts"
+provider = "Forgejo"
+file = "CustomFonts.dll"
+categories = ["Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
 name = "SpinRequests"
 author = "TheBlackParrot"
 description = "In-game song request manager"
