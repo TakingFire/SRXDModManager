@@ -50,7 +50,7 @@ impl Provider for GitHub {
 
         let releases: Releases = CLIENT
             .get(format!("https://api.{}/repos{}/releases", host, repository))
-            .bearer_auth(&(*TOKEN.clone().unwrap()))
+            .bearer_auth((*TOKEN).clone().unwrap())
             .send()
             .await?
             .json()
@@ -77,7 +77,7 @@ impl Provider for GitHub {
                     } else {
                         let file = CLIENT
                             .get(asset.browser_download_url.clone())
-                            .bearer_auth(&*TOKEN.clone().unwrap())
+                            .bearer_auth((*TOKEN).clone().unwrap())
                             .send()
                             .await?
                             .bytes()

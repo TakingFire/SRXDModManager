@@ -15,7 +15,8 @@ RUN cargo chef cook --profile server --target x86_64-unknown-linux-musl --recipe
 COPY . .
 RUN cargo build --profile server --target x86_64-unknown-linux-musl --bin server
 
-FROM alpine AS runtime
+FROM alpine:latest AS runtime
+RUN apk add --no-cache ca-certificates
 WORKDIR /app
 COPY --from=builder /app/server/mods ./mods
 RUN chown -R nobody:nobody /app/mods

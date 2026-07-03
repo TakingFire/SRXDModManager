@@ -61,8 +61,6 @@ impl Provider for Forgejo {
 
             for asset in release.assets {
                 if wildmatch::WildMatch::new(&entry.file).matches(&asset.name) {
-                    let sha256: String;
-
                     let file = CLIENT
                         .get(asset.browser_download_url.clone())
                         .send()
@@ -70,7 +68,7 @@ impl Provider for Forgejo {
                         .bytes()
                         .await?;
 
-                    sha256 = hash_file(file);
+                    let sha256 = hash_file(file);
 
                     entry.versions.push(Version {
                         name: release.tag_name.clone(),

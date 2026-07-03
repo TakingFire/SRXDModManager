@@ -1,7 +1,7 @@
 use std::{sync::LazyLock, time::Duration};
 
 use axum::{Json, Router, http::StatusCode, response::Redirect, routing::get};
-use futures::future::join_all;
+use futures::stream::{self, StreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use model::{Manifest, Mod};
 use tokio::{self, time::interval};
@@ -113,25 +113,29 @@ async fn build_manifest() -> anyhow::Result<()> {
     let plugins_progress = progress_bars.add(ProgressBar::new(entry_map.len() as u64));
     let releases_progress = progress_bars.add(ProgressBar::new(0));
 
-    let tasks = entry_map.iter_mut().map(|(mod_template, mod_entry)| {
-        let releases_progress = releases_progress.clone();
-        let plugins_progress = plugins_progress.clone();
-        async move {
-            let result = match mod_template.provider {
-                ProviderType::GitHub => GitHub::get_versions(mod_entry, releases_progress).await,
-                ProviderType::Forgejo => Forgejo::get_versions(mod_entry, releases_progress).await,
-            };
+    stream::iter(entry_map.iter_mut())
+        .for_each_concurrent(4, |(mod_template, mod_entry)| {
+            let releases_progress = releases_progress.clone();
+            let plugins_progress = plugins_progress.clone();
+            async move {
+                let result = match mod_template.provider {
+                    ProviderType::GitHub => {
+                        GitHub::get_versions(mod_entry, releases_progress).await
+                    }
+                    ProviderType::Forgejo => {
+                        Forgejo::get_versions(mod_entry, releases_progress).await
+                    }
+                };
 
-            if let Err(err) = result {
-                eprintln!("{err}");
-                eprintln!("Failed to get versions for {}", mod_entry.id);
+                if let Err(err) = result {
+                    eprintln!("Failed to get versions for {}", mod_entry.id);
+                    eprintln!("{:?}", err);
+                }
+
+                plugins_progress.inc(1);
             }
-
-            plugins_progress.inc(1);
-        }
-    });
-
-    join_all(tasks).await;
+        })
+        .await;
 
     plugins_progress.finish_and_clear();
     releases_progress.finish_and_clear();
