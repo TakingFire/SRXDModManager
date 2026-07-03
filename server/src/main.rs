@@ -68,7 +68,7 @@ async fn build_manifest() -> anyhow::Result<()> {
     let template: Template = get_template_github()
         .await
         .inspect_err(|err| {
-            eprintln!("{err}");
+            eprintln!("{:?}", err);
             eprintln!("Using fallback template");
         })
         .unwrap_or(
@@ -88,20 +88,26 @@ async fn build_manifest() -> anyhow::Result<()> {
         .mods
         .iter()
         .map(|mod_template| {
-            let mut converted: Mod = mod_template.into();
-            (
-                mod_template.clone(),
-                manifest
-                    .mods
-                    .iter_mut()
-                    .find(|entry| entry.id == converted.id)
-                    .unwrap_or(&mut converted)
-                    .clone(),
-            )
+            let converted: Mod = mod_template.into();
+            let mod_entry = manifest
+                .mods
+                .iter()
+                .find(|entry| entry.id == converted.id)
+                .map(|entry| Mod {
+                    versions: entry.versions.clone(),
+                    ..converted.clone()
+                })
+                .unwrap_or(converted);
+
+            (mod_template.clone(), mod_entry)
         })
         .collect();
 
-    for (_, mod_entry) in &entry_map {
+    for (_, mod_entry) in &mut entry_map {
+        mod_entry
+            .versions
+            .sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
         for category in &mod_entry.categories {
             if !manifest.categories.contains(category) {
                 manifest.categories.push(category.clone());
