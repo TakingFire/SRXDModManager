@@ -407,10 +407,22 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                 .join("plugins")
                 .join(&version.digest);
 
-            fs::remove_dir_all(&plugin_dir)
+            let metadata = fs::metadata(&plugin_dir)
                 .await
                 .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::error(t!("error.file_delete")))?;
+                .map_err(|_| MessageType::error(t!("error.path_locate")))?;
+
+            if metadata.is_dir() {
+                fs::remove_dir_all(&plugin_dir)
+                    .await
+                    .inspect_err(|e| eprintln!("{}", e))
+                    .map_err(|_| MessageType::error(t!("error.file_delete")))?;
+            } else {
+                fs::remove_file(&plugin_dir)
+                    .await
+                    .inspect_err(|e| eprintln!("{}", e))
+                    .map_err(|_| MessageType::error(t!("error.file_delete")))?;
+            }
 
             Ok(())
         }()

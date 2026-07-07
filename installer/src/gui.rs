@@ -2,7 +2,7 @@ use std::{collections::HashSet, time::Duration};
 
 use eframe::egui::{
     self, CentralPanel, Color32, ComboBox, Context, Frame, Id, Modal, OpenUrl, RichText,
-    ScrollArea, SidePanel, TextEdit, TopBottomPanel,
+    ScrollArea, SidePanel, Stroke, TextEdit, TopBottomPanel,
 };
 
 use crate::app::{Installer, InstallerState, ModEntry, ModEntryRef, ModEntryState};
@@ -23,6 +23,7 @@ pub struct Gui {
 
     filtered_mods: Vec<ModEntryRef>,
     updatable_mods: Vec<ModEntryRef>,
+    unrecognized_mods: Vec<ModEntryRef>,
 
     show_disclaimer: bool,
     disclaimer_checkbox: bool,
@@ -41,6 +42,7 @@ enum FilterBy {
     Installed,
     Uninstalled,
     Updatable,
+    Unrecognized,
 }
 
 #[derive(Debug, Default, PartialEq, Copy, Clone)]
@@ -103,6 +105,10 @@ impl eframe::App for Gui {
 
         if !self.updatable_mods.is_empty() {
             self.draw_update_bar(ctx);
+        }
+
+        if !self.unrecognized_mods.is_empty() {
+            self.draw_unrecognized_bar(ctx);
         }
 
         self.draw_mod_list(ctx);
@@ -214,6 +220,38 @@ impl Gui {
                     if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
                         for entry in &self.updatable_mods {
                             self.installer.update_mod(&mut entry.clone().borrow_mut());
+                        }
+                    }
+                });
+            });
+    }
+
+    fn draw_unrecognized_bar(&mut self, ctx: &Context) {
+        TopBottomPanel::top("ui_unrecognized")
+            .exact_height(28.0)
+            .show(ctx, |ui| {
+                ui.horizontal_centered(|ui| {
+                    ui.label(
+                        RichText::new(t!(
+                            "popup.mod_unrecognized.text",
+                            count = self.unrecognized_mods.len()
+                        ))
+                        .color(Color32::from_rgb(255, 160, 80)),
+                    );
+                    if ui
+                        .small_button(t!("popup.mod_unrecognized.btn_show"))
+                        .clicked()
+                    {
+                        self.filter_by = FilterBy::Unrecognized;
+                        self.installer.force_ui_update = true;
+                    }
+                    if ui
+                        .small_button(t!("popup.mod_unrecognized.btn_remove"))
+                        .clicked()
+                    {
+                        for entry in &self.unrecognized_mods {
+                            self.installer
+                                .uninstall_mod(&mut entry.clone().borrow_mut());
                         }
                     }
                 });
@@ -422,8 +460,23 @@ impl Gui {
     }
 
     fn draw_mod_entry(&mut self, ui: &mut egui::Ui, entry: &mut ModEntry) {
+        let accent_color = if !entry.recognized {
+            Color32::from_rgb(255, 160, 80)
+        } else if matches!(entry.state, ModEntryState::Installed) {
+            Color32::from_rgb(90, 170, 255)
+        } else {
+            Color32::TRANSPARENT
+        };
+
+        let fill_color = ui.visuals().window_fill + Color32::from_gray(6);
+        let border_color = ui.visuals().window_stroke.color;
+
         Frame::group(ui.style())
-            .fill(ui.visuals().window_fill + Color32::from_gray(6))
+            .fill(fill_color.blend(accent_color.gamma_multiply(0.0625)))
+            .stroke(Stroke {
+                color: border_color.blend(accent_color.gamma_multiply(0.25)),
+                ..ui.visuals().window_stroke
+            })
             .show(ui, |ui| {
                 ui.take_available_width();
                 ui.horizontal(|ui| {
@@ -435,12 +488,18 @@ impl Gui {
                             )
                             .on_hover_text(entry.entry.url.to_owned());
                             ui.label(
-                                RichText::new(format!("by {}", entry.entry.author.to_owned()))
-                                    .weak(),
+                                RichText::new(t!(
+                                    "modentry.author",
+                                    name = entry.entry.author.to_owned()
+                                ))
+                                .weak(),
                             );
                         });
-                        ui.add_space(2.0);
-                        ui.label(RichText::new(entry.entry.description.to_owned()));
+
+                        if entry.recognized {
+                            ui.add_space(2.0);
+                            ui.label(RichText::new(entry.entry.description.to_owned()));
+                        }
 
                         if self.show_debug {
                             self.draw_mod_debug(ui, entry);
@@ -459,7 +518,7 @@ impl Gui {
                         ui.set_width(button_width);
                         let button = ui.button(match entry.state {
                             ModEntryState::Uninstalled => t!("modentry.button.install"),
-                            ModEntryState::PendingInstall => t!("modentry.button.downlading"),
+                            ModEntryState::PendingInstall => t!("modentry.button.downloading"),
                             ModEntryState::Installed => t!("modentry.button.uninstall"),
                             ModEntryState::PendingUninstall => t!("modentry.button.removing"),
                             ModEntryState::PendingVersionChangeFrom(_) => {
@@ -483,6 +542,10 @@ impl Gui {
                                 }
                                 _ => {}
                             }
+                        }
+
+                        if !entry.recognized {
+                            return;
                         }
 
                         ui.vertical_centered(|ui| {
@@ -550,6 +613,14 @@ impl Gui {
             .cloned()
             .collect();
 
+        self.unrecognized_mods = self
+            .installer
+            .mods
+            .iter()
+            .filter(|entry| !entry.borrow().recognized)
+            .cloned()
+            .collect();
+
         self.filtered_mods = self
             .installer
             .mods
@@ -578,6 +649,7 @@ impl Gui {
                     entry.borrow().state,
                     ModEntryState::PendingVersionChangeFrom(_)
                 ),
+                FilterBy::Unrecognized => !entry.borrow().recognized,
             })
             .filter(|entry| {
                 self.categories

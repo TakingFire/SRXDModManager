@@ -21,6 +21,10 @@ recent = "Recent"
 title = "Title"
 author = "Author"
 
+[modentry]
+author = "by %{name}"
+unknown = "Unknown"
+
 [modentry.button]
 install = "Install"
 downloading = "Downloading"
@@ -55,6 +59,11 @@ btn_report = "Report an issue"
 text = "Update available for %{count} mod(s)!"
 btn_show = "Show"
 btn_update = "Update All"
+
+[popup.mod_unrecognized]
+text = "Found %{count} unknown mod(s)"
+btn_show = "Show"
+btn_remove = "Remove All"
 
 [status]
 ready = "Ready"

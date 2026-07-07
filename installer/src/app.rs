@@ -1,7 +1,7 @@
 use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
 
 use flume::{Receiver, Sender};
-use model::{Manifest, Mod};
+use model::{Manifest, Mod, Version};
 
 use crate::patch::{
     self, GetDirectoriesContext, GetInstalledModsContext, GetManifestContext, GetPatcherContext,
@@ -24,6 +24,7 @@ pub struct ModEntry {
     pub state: ModEntryState,
     pub selected_version: usize,
     pub active_dependents: usize,
+    pub recognized: bool,
 }
 
 pub type ModEntryRef = Rc<RefCell<ModEntry>>;
@@ -153,6 +154,28 @@ impl Installer {
                                 for dependency in self.get_dependencies(&entry) {
                                     dependency.borrow_mut().active_dependents += 1;
                                 }
+                            } else {
+                                let entry = ModEntry {
+                                    recognized: false,
+                                    entry: Mod {
+                                        id: digest.into(),
+                                        name: digest.into(),
+                                        author: t!("modentry.unknown").into(),
+                                        versions: vec![Version {
+                                            digest: digest.into(),
+                                            ..Default::default()
+                                        }],
+                                        ..Default::default()
+                                    },
+                                    state: ModEntryState::Installed,
+                                    selected_version: 0,
+                                    ..Default::default()
+                                };
+
+                                let entry_ref = Rc::new(RefCell::new(entry));
+
+                                self.mods.push(entry_ref.clone());
+                                self.digest_map.insert(digest.into(), (entry_ref, 0));
                             }
                         }
 
@@ -187,6 +210,14 @@ impl Installer {
                     patch::TaskContext::UninstallMod(ctx) => {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Uninstalled;
+
+                            if !entry.borrow().recognized {
+                                if let Some(idx) =
+                                    self.mods.iter().position(|e| Rc::ptr_eq(&e, &entry))
+                                {
+                                    self.mods.remove(idx);
+                                }
+                            }
                         }
                     }
 
@@ -272,6 +303,7 @@ impl Installer {
             self.mods.push(Rc::new(RefCell::new(ModEntry {
                 entry: entry.clone(),
                 selected_version: 0,
+                recognized: true,
                 ..Default::default()
             })));
         }
