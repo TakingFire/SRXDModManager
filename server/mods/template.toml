@@ -149,6 +149,15 @@ categories = ["Integrations"]
 dependencies = ["Raoul1808_SpinCore"]
 
 [[mods]]
+name = "Skip the Ship"
+author = "TheBlackParrot"
+description = "Skip the ship animation when starting a song"
+repository = "https://github.com/TheBlackParrot/SkipTheShip"
+provider = "GitHub"
+file = "SkipTheShip.dll"
+categories = ["Utility"]
+
+[[mods]]
 name = "Additional VR Settings"
 author = "TheBlackParrot"
 description = "Additional settings for the VR view"
