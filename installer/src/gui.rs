@@ -402,7 +402,7 @@ impl Gui {
                                 self.filtered_mods.len().div_ceil(column_count);
 
                             ui.columns(column_count, |cols| {
-                                for col in 0..cols.len() {
+                                for (col, ui) in cols.iter_mut().enumerate() {
                                     for row in 0..entries_per_column {
                                         let entry = row + col * entries_per_column;
                                         if entry >= self.filtered_mods.len() {
@@ -410,7 +410,7 @@ impl Gui {
                                         }
 
                                         self.draw_mod_entry(
-                                            &mut cols[col],
+                                            ui,
                                             &mut self.filtered_mods[entry].clone().borrow_mut(),
                                         );
                                     }
@@ -451,8 +451,8 @@ impl Gui {
                     ui.add_space(ui.available_width() - button_width);
 
                     ui.vertical_centered_justified(|ui| {
-                        if entry.state == ModEntryState::PendingInstall
-                            || entry.state == ModEntryState::PendingUninstall
+                        if matches!(entry.state, ModEntryState::PendingInstall)
+                            || matches!(entry.state, ModEntryState::PendingUninstall)
                         {
                             ui.disable();
                         }

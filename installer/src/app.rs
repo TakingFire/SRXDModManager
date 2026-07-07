@@ -8,7 +8,7 @@ use crate::patch::{
     InstallModContext, LaunchGameContext, MessageType, PatchGameFilesContext, StatusType,
 };
 
-#[derive(Debug, Default, PartialEq, Clone)]
+#[derive(Debug, Default, Clone)]
 pub enum ModEntryState {
     #[default]
     Uninstalled,

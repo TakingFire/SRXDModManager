@@ -77,7 +77,7 @@ files_remove = "Removing Patch Files"
 launch_game = "Launching Game"
 
 [warning]
-mod_unrecognized = "%{count} Mods(s) Unrecognized"
+mod_unrecognized = "%{count} Mod(s) Unrecognized"
 mod_required = "This mod is required by %{count} mod(s)"
 unityplayer = "UnityPlayer Renamed or Missing"
 

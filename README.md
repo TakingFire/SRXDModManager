@@ -13,5 +13,3 @@ Encounter a problem? Please [**create an issue**](https://github.com/TakingFire/
 
 - Add your mod details to [this file](https://github.com/TakingFire/SRXDModManager/blob/main/server/mods/template.toml) and open a Pull Request. 
 - Your mod will appear in the mod manager within 30 minutes of the PR's approval.
-
-[^1]: GitHub only, Codeberg support coming soon
