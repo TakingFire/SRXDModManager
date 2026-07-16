@@ -72,6 +72,15 @@ file = "ForceCombo.dll"
 categories = ["Utility"]
 
 [[mods]]
+name = "Particle Annihilator"
+author = "Aexus"
+description = "Remove all particle effects from the game"
+repository = "https://github.com/TakingFire/SRXDTweaks"
+provider = "GitHub"
+file = "ParticleAnnihilator.dll"
+categories = ["Appearance"]
+
+[[mods]]
 name = "Chart Helper"
 author = "SRXDModdingGroup"
 description = "Library for loading and parsing chart files"
