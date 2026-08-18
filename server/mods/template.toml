@@ -72,6 +72,16 @@ file = "ForceCombo.dll"
 categories = ["Utility"]
 
 [[mods]]
+name = "Lyrics Plus"
+author = "Schroeder"
+description = "Additional features for charting lyrics"
+repository = "https://github.com/Kelvin-9/LyricsPlus"
+provider = "GitHub"
+file = "LyricsPlus.dll"
+categories = ["Charting", "Appearance"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
 name = "Particle Annihilator"
 author = "Aexus"
 description = "Remove all particle effects from the game"
