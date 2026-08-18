@@ -53,6 +53,16 @@ categories = ["Charting", "Appearance"]
 dependencies = ["Raoul1808_SpinCore"]
 
 [[mods]]
+name = "LyricsPlus"
+author = "Schroeder"
+description = "Lyrics related effects, features and QoL changes"
+repository = "https://github.com/Kelvin-9/LyricsPlus"
+provider = "GitHub"
+file = "LyricsPlus.dll"
+categories = ["Charting", "Appearance", "Utility"]
+dependencies = ["Raoul1808_SpinCore"]
+
+[[mods]]
 name = "Dynamic Track Speed"
 author = "Raoul1808"
 description = "Dynamic per-chart track speed"
