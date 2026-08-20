@@ -211,12 +211,11 @@ impl Installer {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Uninstalled;
 
-                            if !entry.borrow().recognized {
-                                if let Some(idx) =
-                                    self.mods.iter().position(|e| Rc::ptr_eq(&e, &entry))
-                                {
-                                    self.mods.remove(idx);
-                                }
+                            if !entry.borrow().recognized
+                                && let Some(idx) =
+                                    self.mods.iter().position(|e| Rc::ptr_eq(e, &entry))
+                            {
+                                self.mods.remove(idx);
                             }
                         }
                     }

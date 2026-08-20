@@ -357,110 +357,122 @@ impl Gui {
     }
 
     fn draw_mod_list(&mut self, ui: &mut Ui) {
-        CentralPanel::default().show(ui, |ui| {
-            ui.style_mut().spacing.scroll = egui::style::ScrollStyle::solid();
+        let style = Frame::central_panel(ui.style());
+        let padding = egui::Margin {
+            bottom: 0,
+            ..style.inner_margin
+        };
 
-            let filter_by_before = self.filter_by;
-            let sort_by_before = self.sort_by;
+        CentralPanel::default()
+            .frame(style.inner_margin(padding))
+            .show(ui, |ui| {
+                ui.style_mut().spacing.scroll = egui::style::ScrollStyle::solid();
 
-            ScrollArea::horizontal()
-                .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
-                .show(ui, |ui| {
-                    ui.take_available_space();
-                    ui.horizontal(|ui| {
-                        ui.selectable_value(
-                            &mut self.filter_by,
-                            FilterBy::All,
-                            t!("config.filter.all"),
-                        );
-                        ui.selectable_value(
-                            &mut self.filter_by,
-                            FilterBy::Installed,
-                            t!("config.filter.installed"),
-                        );
-                        ui.selectable_value(
-                            &mut self.filter_by,
-                            FilterBy::Uninstalled,
-                            t!("config.filter.uninstalled"),
-                        );
+                let filter_by_before = self.filter_by;
+                let sort_by_before = self.sort_by;
 
-                        ui.label(t!("label.sort"));
-                        let _ = ComboBox::from_id_salt("ui_sort")
-                            .width(80.0)
-                            .selected_text(match self.sort_by {
-                                SortBy::Recent => t!("config.sort.recent"),
-                                SortBy::Title => t!("config.sort.title"),
-                                SortBy::Author => t!("config.sort.author"),
-                            })
-                            .show_ui(ui, |ui| {
-                                ui.selectable_value(
-                                    &mut self.sort_by,
-                                    SortBy::Recent,
-                                    t!("config.sort.recent"),
-                                );
-                                ui.selectable_value(
-                                    &mut self.sort_by,
-                                    SortBy::Title,
-                                    t!("config.sort.title"),
-                                );
-                                ui.selectable_value(
-                                    &mut self.sort_by,
-                                    SortBy::Author,
-                                    t!("config.sort.author"),
-                                );
-                            });
-                        if ui
-                            .add(
-                                TextEdit::singleline(&mut self.search)
-                                    .hint_text(t!("label.search")),
-                            )
-                            .changed()
-                        {
+                ScrollArea::horizontal()
+                    .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
+                    .show(ui, |ui| {
+                        ui.take_available_space();
+                        ui.horizontal(|ui| {
+                            ui.selectable_value(
+                                &mut self.filter_by,
+                                FilterBy::All,
+                                t!("config.filter.all"),
+                            );
+                            ui.selectable_value(
+                                &mut self.filter_by,
+                                FilterBy::Installed,
+                                t!("config.filter.installed"),
+                            );
+                            ui.selectable_value(
+                                &mut self.filter_by,
+                                FilterBy::Uninstalled,
+                                t!("config.filter.uninstalled"),
+                            );
+
+                            ui.label(t!("label.sort"));
+                            let _ = ComboBox::from_id_salt("ui_sort")
+                                .width(80.0)
+                                .selected_text(match self.sort_by {
+                                    SortBy::Recent => t!("config.sort.recent"),
+                                    SortBy::Title => t!("config.sort.title"),
+                                    SortBy::Author => t!("config.sort.author"),
+                                })
+                                .show_ui(ui, |ui| {
+                                    ui.selectable_value(
+                                        &mut self.sort_by,
+                                        SortBy::Recent,
+                                        t!("config.sort.recent"),
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.sort_by,
+                                        SortBy::Title,
+                                        t!("config.sort.title"),
+                                    );
+                                    ui.selectable_value(
+                                        &mut self.sort_by,
+                                        SortBy::Author,
+                                        t!("config.sort.author"),
+                                    );
+                                });
+                            if ui
+                                .add(
+                                    TextEdit::singleline(&mut self.search)
+                                        .hint_text(t!("label.search")),
+                                )
+                                .changed()
+                            {
+                                self.installer.force_ui_update = true;
+                            }
+                        });
+
+                        if self.filter_by != filter_by_before || self.sort_by != sort_by_before {
                             self.installer.force_ui_update = true;
                         }
-                    });
 
-                    if self.filter_by != filter_by_before || self.sort_by != sort_by_before {
-                        self.installer.force_ui_update = true;
-                    }
+                        ui.add_space(4.0);
+                        ScrollArea::vertical()
+                            .scroll_bar_visibility(
+                                egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
+                            )
+                            .show(ui, |ui| {
+                                ui.take_available_space();
+                                let column_width = 400.0;
+                                let column_count =
+                                    ((ui.available_width() / column_width) as usize).max(1);
+                                let entries_per_column =
+                                    self.filtered_mods.len().div_ceil(column_count);
 
-                    ui.add_space(4.0);
-                    ScrollArea::vertical()
-                        .scroll_bar_visibility(
-                            egui::scroll_area::ScrollBarVisibility::AlwaysVisible,
-                        )
-                        .show(ui, |ui| {
-                            ui.take_available_space();
-                            let column_width = 400.0;
-                            let column_count =
-                                ((ui.available_width() / column_width) as usize).max(1);
-                            let entries_per_column =
-                                self.filtered_mods.len().div_ceil(column_count);
+                                ui.columns(column_count, |cols| {
+                                    for (col, ui) in cols.iter_mut().enumerate() {
+                                        for row in 0..entries_per_column {
+                                            let entry = row + col * entries_per_column;
+                                            if entry >= self.filtered_mods.len() {
+                                                break;
+                                            }
 
-                            ui.columns(column_count, |cols| {
-                                for (col, ui) in cols.iter_mut().enumerate() {
-                                    for row in 0..entries_per_column {
-                                        let entry = row + col * entries_per_column;
-                                        if entry >= self.filtered_mods.len() {
-                                            break;
+                                            self.draw_mod_entry(
+                                                ui,
+                                                &mut self.filtered_mods[entry].clone().borrow_mut(),
+                                            );
                                         }
-
-                                        self.draw_mod_entry(
-                                            ui,
-                                            &mut self.filtered_mods[entry].clone().borrow_mut(),
-                                        );
                                     }
-                                }
+                                });
+                                ui.add_space(4.0);
                             });
-                        });
-                });
-        });
+                    });
+            });
     }
 
     fn draw_mod_entry(&mut self, ui: &mut Ui, entry: &mut ModEntry) {
         let accent_color = if !entry.recognized {
             Color32::from_rgb(255, 160, 80)
-        } else if matches!(entry.state, ModEntryState::Installed) {
+        } else if matches!(
+            entry.state,
+            ModEntryState::Installed | ModEntryState::PendingVersionChangeFrom(_)
+        ) {
             Color32::from_rgb(90, 170, 255)
         } else {
             Color32::TRANSPARENT
@@ -546,8 +558,7 @@ impl Gui {
                             return;
                         }
 
-                        ui.vertical_centered(|ui| {
-                            ComboBox::from_id_salt(entry.entry.name.to_owned())
+                        ComboBox::from_id_salt(entry.entry.name.to_owned())
                                 .selected_text(match entry.state {
                                     ModEntryState::PendingVersionChangeFrom(current_version) => {
                                         format!(
@@ -576,7 +587,26 @@ impl Gui {
                                         }
                                     }
                                 });
-                        });
+
+                        if self.show_debug
+                            && matches!(
+                                entry.state,
+                                ModEntryState::Installed
+                                    | ModEntryState::PendingVersionChangeFrom(_)
+                            )
+                            && ui.button(t!("modentry.button.open_folder")).clicked()
+                        {
+                            let _ = open::that(
+                                self.installer
+                                    .dirs
+                                    .app_dir
+                                    .as_ref()
+                                    .unwrap()
+                                    .join("BepInEx")
+                                    .join("plugins")
+                                    .join(&entry.entry.versions[entry.selected_version].digest),
+                            );
+                        }
                     });
                 });
             });

@@ -436,7 +436,7 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
-                "status.set_config"
+                "status.config_set"
             ))));
 
             let app_dir = ctx.directories.app_dir.as_ref().unwrap();
