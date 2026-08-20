@@ -1,8 +1,8 @@
 use std::{collections::HashSet, time::Duration};
 
 use eframe::egui::{
-    self, CentralPanel, Color32, ComboBox, Context, Frame, Id, Modal, OpenUrl, RichText,
-    ScrollArea, SidePanel, Stroke, TextEdit, TopBottomPanel,
+    self, CentralPanel, Color32, ComboBox, Frame, Id, Modal, OpenUrl, Panel, RichText, ScrollArea,
+    Stroke, TextEdit, Ui,
 };
 
 use crate::app::{Installer, InstallerState, ModEntry, ModEntryRef, ModEntryState};
@@ -56,7 +56,7 @@ enum SortBy {
 impl eframe::App for Gui {
     fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {}
 
-    fn update(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
+    fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.input(|input| {
             if input.key_pressed(egui::Key::F1) {
                 self.show_debug = !self.show_debug;
@@ -83,43 +83,45 @@ impl eframe::App for Gui {
             ctx.request_repaint();
             self.installer.force_ui_update = false;
         }
+    }
 
+    fn ui(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
         if matches!(self.installer.state, InstallerState::Outdated) {
-            self.draw_outdated_warning(ctx);
+            self.draw_outdated_warning(ui);
         } else {
             #[cfg(not(target_os = "windows"))]
             if self.show_linux_guide {
-                self.draw_linux_guide(ctx, frame);
+                self.draw_linux_guide(ui, frame);
             }
 
             if self.show_disclaimer && !self.show_linux_guide {
-                self.draw_disclaimer(ctx, frame);
+                self.draw_disclaimer(ui, frame);
             }
         }
 
         if matches!(self.installer.state, InstallerState::Error) {
-            self.draw_error_bar(ctx);
+            self.draw_error_bar(ui);
         }
 
-        self.draw_sidebar(ctx);
+        self.draw_sidebar(ui);
 
         if !self.updatable_mods.is_empty() {
-            self.draw_update_bar(ctx);
+            self.draw_update_bar(ui);
         }
 
         if !self.unrecognized_mods.is_empty() {
-            self.draw_unrecognized_bar(ctx);
+            self.draw_unrecognized_bar(ui);
         }
 
-        self.draw_mod_list(ctx);
+        self.draw_mod_list(ui);
 
-        ctx.request_repaint_after(Duration::from_millis(100));
+        ui.request_repaint_after(Duration::from_millis(100));
     }
 }
 
 impl Gui {
-    fn draw_outdated_warning(&mut self, ctx: &Context) {
-        Modal::new(Id::new("ui_disclaimer")).show(ctx, |ui| {
+    fn draw_outdated_warning(&mut self, ui: &mut Ui) {
+        Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("popup.outdated.title")).size(18.0));
@@ -135,8 +137,8 @@ impl Gui {
         });
     }
 
-    fn draw_disclaimer(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
-        Modal::new(Id::new("ui_disclaimer")).show(ctx, |ui| {
+    fn draw_disclaimer(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+        Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(220.0);
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("popup.disclaimer.title")).size(18.0));
@@ -158,8 +160,8 @@ impl Gui {
     }
 
     #[cfg(not(target_os = "windows"))]
-    fn draw_linux_guide(&mut self, ctx: &Context, frame: &mut eframe::Frame) {
-        Modal::new(Id::new("ui_linux_guide")).show(ctx, |ui| {
+    fn draw_linux_guide(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+        Modal::new(Id::new("ui_linux_guide")).show(ui, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("popup.linux.title")).size(18.0));
@@ -185,51 +187,47 @@ impl Gui {
         });
     }
 
-    fn draw_error_bar(&mut self, ctx: &Context) {
-        TopBottomPanel::bottom("ui_error")
-            .exact_height(28.0)
-            .show(ctx, |ui| {
-                ui.horizontal_centered(|ui| {
-                    ui.label(RichText::new(t!("popup.error.text")).color(Color32::RED));
-                    if ui.small_button(t!("popup.error.btn_retry")).clicked() {
-                        self.installer.init();
-                    }
-                    if ui.small_button(t!("popup.error.btn_report")).clicked() {
-                        ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
-                    }
-                });
+    fn draw_error_bar(&mut self, ui: &mut Ui) {
+        Panel::bottom("ui_error").exact_size(28.0).show(ui, |ui| {
+            ui.horizontal_centered(|ui| {
+                ui.label(RichText::new(t!("popup.error.text")).color(Color32::RED));
+                if ui.small_button(t!("popup.error.btn_retry")).clicked() {
+                    self.installer.init();
+                }
+                if ui.small_button(t!("popup.error.btn_report")).clicked() {
+                    ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
+                }
             });
+        });
     }
 
-    fn draw_update_bar(&mut self, ctx: &Context) {
-        TopBottomPanel::top("ui_update")
-            .exact_height(28.0)
-            .show(ctx, |ui| {
-                ui.horizontal_centered(|ui| {
-                    ui.label(
-                        RichText::new(t!(
-                            "popup.mod_update.text",
-                            count = self.updatable_mods.len()
-                        ))
-                        .color(Color32::from_rgb(90, 170, 255)),
-                    );
-                    if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
-                        self.filter_by = FilterBy::Updatable;
-                        self.installer.force_ui_update = true;
+    fn draw_update_bar(&mut self, ui: &mut Ui) {
+        Panel::top("ui_update").exact_size(28.0).show(ui, |ui| {
+            ui.horizontal_centered(|ui| {
+                ui.label(
+                    RichText::new(t!(
+                        "popup.mod_update.text",
+                        count = self.updatable_mods.len()
+                    ))
+                    .color(Color32::from_rgb(90, 170, 255)),
+                );
+                if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
+                    self.filter_by = FilterBy::Updatable;
+                    self.installer.force_ui_update = true;
+                }
+                if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
+                    for entry in &self.updatable_mods {
+                        self.installer.update_mod(&mut entry.clone().borrow_mut());
                     }
-                    if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
-                        for entry in &self.updatable_mods {
-                            self.installer.update_mod(&mut entry.clone().borrow_mut());
-                        }
-                    }
-                });
+                }
             });
+        });
     }
 
-    fn draw_unrecognized_bar(&mut self, ctx: &Context) {
-        TopBottomPanel::top("ui_unrecognized")
-            .exact_height(28.0)
-            .show(ctx, |ui| {
+    fn draw_unrecognized_bar(&mut self, ui: &mut Ui) {
+        Panel::top("ui_unrecognized")
+            .exact_size(28.0)
+            .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
                         RichText::new(t!(
@@ -258,11 +256,11 @@ impl Gui {
             });
     }
 
-    fn draw_sidebar(&mut self, ctx: &Context) {
-        SidePanel::left("ui_sidebar")
-            .exact_width(160.0)
+    fn draw_sidebar(&mut self, ui: &mut Ui) {
+        Panel::left("ui_sidebar")
+            .exact_size(160.0)
             .resizable(false)
-            .show(ctx, |ui| {
+            .show(ui, |ui| {
                 ui.style_mut().spacing.scroll = egui::style::ScrollStyle::thin();
 
                 ui.add_space(6.0);
@@ -358,8 +356,8 @@ impl Gui {
             });
     }
 
-    fn draw_mod_list(&mut self, ctx: &Context) {
-        CentralPanel::default().show(ctx, |ui| {
+    fn draw_mod_list(&mut self, ui: &mut Ui) {
+        CentralPanel::default().show(ui, |ui| {
             ui.style_mut().spacing.scroll = egui::style::ScrollStyle::solid();
 
             let filter_by_before = self.filter_by;
@@ -459,7 +457,7 @@ impl Gui {
         });
     }
 
-    fn draw_mod_entry(&mut self, ui: &mut egui::Ui, entry: &mut ModEntry) {
+    fn draw_mod_entry(&mut self, ui: &mut Ui, entry: &mut ModEntry) {
         let accent_color = if !entry.recognized {
             Color32::from_rgb(255, 160, 80)
         } else if matches!(entry.state, ModEntryState::Installed) {
@@ -584,7 +582,7 @@ impl Gui {
             });
     }
 
-    fn draw_mod_debug(&self, ui: &mut egui::Ui, entry: &mut ModEntry) {
+    fn draw_mod_debug(&self, ui: &mut Ui, entry: &mut ModEntry) {
         ui.label(
             RichText::new(format!("Categories: {}", entry.entry.categories.join(", "))).weak(),
         );
