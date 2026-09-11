@@ -30,6 +30,8 @@ pub struct Gui {
     show_linux_guide: bool,
     #[allow(unused)]
     linux_guide_checkbox: bool,
+    show_config_popup: bool,
+    config_popup_checkbox: bool,
 
     initialized: bool,
     show_debug: bool,
@@ -58,9 +60,7 @@ impl eframe::App for Gui {
 
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.input(|input| {
-            if input.key_pressed(egui::Key::F1) {
-                self.show_debug = !self.show_debug;
-            }
+            self.show_debug = input.key_down(egui::Key::AltLeft);
         });
 
         if !self.initialized {
@@ -71,6 +71,7 @@ impl eframe::App for Gui {
                 {
                     self.show_linux_guide = storage.get_string("show_linux_guide").is_none();
                 }
+                self.show_config_popup = storage.get_string("show_config_popup").is_none();
             }
             self.build_list();
             self.initialized = true;
@@ -96,6 +97,10 @@ impl eframe::App for Gui {
 
             if self.show_disclaimer && !self.show_linux_guide {
                 self.draw_disclaimer(ui, frame);
+            }
+
+            if self.installer.show_config_popup && self.show_config_popup && !self.show_disclaimer {
+                self.draw_config_popup(ui, frame);
             }
         }
 
@@ -147,14 +152,16 @@ impl Gui {
                 ui.add_space(8.0);
                 ui.checkbox(&mut self.disclaimer_checkbox, t!("button.disable_popup"));
 
-                if ui.button(t!("popup.disclaimer.button")).clicked() {
-                    self.show_disclaimer = false;
-                    if self.disclaimer_checkbox
-                        && let Some(storage) = frame.storage_mut()
-                    {
-                        storage.set_string("show_disclaimer", "false".into());
+                ui.vertical_centered_justified(|ui| {
+                    if ui.button(t!("popup.disclaimer.button")).clicked() {
+                        self.show_disclaimer = false;
+                        if self.disclaimer_checkbox
+                            && let Some(storage) = frame.storage_mut()
+                        {
+                            storage.set_string("show_disclaimer", "false".into());
+                        }
                     }
-                }
+                });
             });
         });
     }
@@ -175,14 +182,53 @@ impl Gui {
                 ui.add_space(8.0);
                 ui.checkbox(&mut self.linux_guide_checkbox, t!("button.disable_popup"));
 
-                if ui.button(t!("popup.linux.button")).clicked() {
-                    self.show_linux_guide = false;
-                    if self.linux_guide_checkbox
-                        && let Some(storage) = frame.storage_mut()
-                    {
-                        storage.set_string("show_linux_guide", "false".into());
+                ui.vertical_centered_justified(|ui| {
+                    if ui.button(t!("popup.linux.button")).clicked() {
+                        self.show_linux_guide = false;
+                        if self.linux_guide_checkbox
+                            && let Some(storage) = frame.storage_mut()
+                        {
+                            storage.set_string("show_linux_guide", "false".into());
+                        }
                     }
-                }
+                });
+            });
+        });
+    }
+
+    fn draw_config_popup(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+        Modal::new(Id::new("ui_config")).show(ui, |ui| {
+            ui.set_width(220.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(t!("popup.existing_config.title")).size(18.0));
+                ui.label(t!("popup.existing_config.text1"));
+                ui.label(t!("popup.existing_config.text2"));
+
+                ui.add_space(8.0);
+                ui.checkbox(&mut self.config_popup_checkbox, t!("button.disable_popup"));
+
+                ui.columns(2, |cols| {
+                    cols[0].vertical_centered_justified(|ui| {
+                        if ui.button(t!("popup.existing_config.btn_cancel")).clicked() {
+                            self.installer.show_config_popup = false;
+                            if self.config_popup_checkbox
+                                && let Some(storage) = frame.storage_mut()
+                            {
+                                storage.set_string("show_config_popup", "false".into());
+                            }
+                        }
+                    });
+
+                    cols[1].vertical_centered_justified(|ui| {
+                        if ui.button(t!("popup.existing_config.btn_copy")).clicked() {
+                            self.installer.show_config_popup = false;
+                            if let Some(storage) = frame.storage_mut() {
+                                storage.set_string("show_config_popup", "false".into());
+                            }
+                            self.installer.copy_existing_config();
+                        }
+                    });
+                });
             });
         });
     }
@@ -368,69 +414,10 @@ impl Gui {
             .show(ui, |ui| {
                 ui.style_mut().spacing.scroll = egui::style::ScrollStyle::solid();
 
-                let filter_by_before = self.filter_by;
-                let sort_by_before = self.sort_by;
-
                 ScrollArea::horizontal()
                     .scroll_bar_visibility(egui::scroll_area::ScrollBarVisibility::AlwaysHidden)
                     .show(ui, |ui| {
-                        ui.take_available_space();
-                        ui.horizontal(|ui| {
-                            ui.selectable_value(
-                                &mut self.filter_by,
-                                FilterBy::All,
-                                t!("config.filter.all"),
-                            );
-                            ui.selectable_value(
-                                &mut self.filter_by,
-                                FilterBy::Installed,
-                                t!("config.filter.installed"),
-                            );
-                            ui.selectable_value(
-                                &mut self.filter_by,
-                                FilterBy::Uninstalled,
-                                t!("config.filter.uninstalled"),
-                            );
-
-                            ui.label(t!("label.sort"));
-                            let _ = ComboBox::from_id_salt("ui_sort")
-                                .width(80.0)
-                                .selected_text(match self.sort_by {
-                                    SortBy::Recent => t!("config.sort.recent"),
-                                    SortBy::Title => t!("config.sort.title"),
-                                    SortBy::Author => t!("config.sort.author"),
-                                })
-                                .show_ui(ui, |ui| {
-                                    ui.selectable_value(
-                                        &mut self.sort_by,
-                                        SortBy::Recent,
-                                        t!("config.sort.recent"),
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.sort_by,
-                                        SortBy::Title,
-                                        t!("config.sort.title"),
-                                    );
-                                    ui.selectable_value(
-                                        &mut self.sort_by,
-                                        SortBy::Author,
-                                        t!("config.sort.author"),
-                                    );
-                                });
-                            if ui
-                                .add(
-                                    TextEdit::singleline(&mut self.search)
-                                        .hint_text(t!("label.search")),
-                                )
-                                .changed()
-                            {
-                                self.installer.force_ui_update = true;
-                            }
-                        });
-
-                        if self.filter_by != filter_by_before || self.sort_by != sort_by_before {
-                            self.installer.force_ui_update = true;
-                        }
+                        self.draw_filter_bar(ui);
 
                         ui.add_space(4.0);
                         ScrollArea::vertical()
@@ -464,6 +451,58 @@ impl Gui {
                             });
                     });
             });
+    }
+
+    fn draw_filter_bar(&mut self, ui: &mut Ui) {
+        let filter_by_before = self.filter_by;
+        let sort_by_before = self.sort_by;
+
+        ui.take_available_space();
+        ui.horizontal(|ui| {
+            ui.selectable_value(&mut self.filter_by, FilterBy::All, t!("config.filter.all"));
+            ui.selectable_value(
+                &mut self.filter_by,
+                FilterBy::Installed,
+                t!("config.filter.installed"),
+            );
+            ui.selectable_value(
+                &mut self.filter_by,
+                FilterBy::Uninstalled,
+                t!("config.filter.uninstalled"),
+            );
+
+            ui.label(t!("label.sort"));
+            let _ = ComboBox::from_id_salt("ui_sort")
+                .width(80.0)
+                .selected_text(match self.sort_by {
+                    SortBy::Recent => t!("config.sort.recent"),
+                    SortBy::Title => t!("config.sort.title"),
+                    SortBy::Author => t!("config.sort.author"),
+                })
+                .show_ui(ui, |ui| {
+                    ui.selectable_value(
+                        &mut self.sort_by,
+                        SortBy::Recent,
+                        t!("config.sort.recent"),
+                    );
+                    ui.selectable_value(&mut self.sort_by, SortBy::Title, t!("config.sort.title"));
+                    ui.selectable_value(
+                        &mut self.sort_by,
+                        SortBy::Author,
+                        t!("config.sort.author"),
+                    );
+                });
+            if ui
+                .add(TextEdit::singleline(&mut self.search).hint_text(t!("label.search")))
+                .changed()
+            {
+                self.installer.force_ui_update = true;
+            }
+        });
+
+        if self.filter_by != filter_by_before || self.sort_by != sort_by_before {
+            self.installer.force_ui_update = true;
+        }
     }
 
     fn draw_mod_entry(&mut self, ui: &mut Ui, entry: &mut ModEntry) {

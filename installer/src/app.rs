@@ -3,10 +3,7 @@ use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
 use flume::{Receiver, Sender};
 use model::{Manifest, Mod, Version};
 
-use crate::patch::{
-    self, GetDirectoriesContext, GetInstalledModsContext, GetManifestContext, GetPatcherContext,
-    InstallModContext, LaunchGameContext, MessageType, PatchGameFilesContext, StatusType,
-};
+use crate::patch::{self, MessageType, StatusType};
 
 #[derive(Debug, Default, Clone)]
 pub enum ModEntryState {
@@ -79,6 +76,7 @@ pub struct Installer {
     pub log: Vec<MessageType>,
 
     pub force_ui_update: bool,
+    pub show_config_popup: bool,
 }
 
 impl Default for Installer {
@@ -97,6 +95,7 @@ impl Default for Installer {
             log: Default::default(),
 
             force_ui_update: false,
+            show_config_popup: false,
         }
     }
 }
@@ -105,8 +104,7 @@ impl Installer {
     pub fn init(&mut self) {
         self.state = InstallerState::Init;
         self.log.clear();
-        self.log
-            .push(patch::MessageType::default(t!("status.starting")));
+        self.log.push(MessageType::default(t!("status.starting")));
         self.get_directories();
     }
 
@@ -117,7 +115,7 @@ impl Installer {
 
                 StatusType::Success(ctx) => match ctx {
                     patch::TaskContext::GetDirectories(ctx) => {
-                        self.dirs = ctx.out_directories;
+                        self.dirs = ctx;
                         self.get_manifest();
                     }
 
@@ -134,6 +132,7 @@ impl Installer {
                     }
 
                     patch::TaskContext::GetPatcher(_) => {
+                        self.get_existing_config();
                         self.get_installed_mods();
                     }
 
@@ -197,9 +196,19 @@ impl Installer {
                         self.log(MessageType::success(t!("status.ready")))
                     }
 
+                    patch::TaskContext::GetExistingConfig(_) => {
+                        self.log(MessageType::default(t!("status.config_found")));
+                        self.show_config_popup = true;
+                    }
+
+                    patch::TaskContext::CopyExistingConfig(_) => {
+                        self.log(MessageType::success(t!("status.config_copied")));
+                    }
+
                     patch::TaskContext::InstallMod(ctx) => {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Installed;
+
                             self.log(MessageType::success(t!(
                                 "status.mod_install",
                                 name = ctx.entry.entry.id
@@ -217,6 +226,11 @@ impl Installer {
                             {
                                 self.mods.remove(idx);
                             }
+
+                            self.log(MessageType::success(t!(
+                                "status.mod_uninstall",
+                                name = ctx.entry.entry.id
+                            )));
                         }
                     }
 
@@ -254,6 +268,9 @@ impl Installer {
                         }
                     }
 
+                    patch::TaskContext::GetExistingConfig(_) => {}
+                    patch::TaskContext::CopyExistingConfig(_) => {}
+
                     _ => self.state = InstallerState::Error,
                 },
             }
@@ -290,9 +307,9 @@ impl Installer {
         for entry_ref in &self.mods {
             let entry = &entry_ref.borrow().entry;
             self.id_map.insert(entry.id.clone(), entry_ref.clone());
-            for i in 0..entry.versions.len() {
+            for (i, version) in entry.versions.iter().enumerate() {
                 self.digest_map
-                    .insert(entry.versions[i].digest.clone(), (entry_ref.clone(), i));
+                    .insert(version.digest.clone(), (entry_ref.clone(), i));
             }
         }
     }
@@ -314,25 +331,20 @@ impl Installer {
     }
 
     pub fn get_directories(&self) {
-        patch::get_directories(GetDirectoriesContext::default(), self.tx.clone());
+        patch::get_directories(DirectoryList::default(), self.tx.clone());
     }
 
     pub fn get_patcher(&self) {
-        patch::get_patcher(
-            GetPatcherContext {
-                directories: self.dirs.clone(),
-            },
-            self.tx.clone(),
-        );
+        patch::get_patcher(self.dirs.clone(), self.tx.clone());
     }
 
     pub fn get_manifest(&self) {
-        patch::get_manifest(GetManifestContext::default(), self.tx.clone());
+        patch::get_manifest(patch::GetManifestContext::default(), self.tx.clone());
     }
 
     pub fn get_installed_mods(&self) {
         patch::get_installed_mods(
-            GetInstalledModsContext {
+            patch::GetInstalledModsContext {
                 directories: self.dirs.clone(),
                 out_digest_list: Vec::new(),
             },
@@ -351,7 +363,7 @@ impl Installer {
         entry.state = ModEntryState::PendingInstall; // moved from GUI
 
         patch::install_mod(
-            InstallModContext {
+            patch::InstallModContext {
                 directories: self.dirs.clone(),
                 entry: entry.clone(),
             },
@@ -385,7 +397,7 @@ impl Installer {
         }
 
         patch::uninstall_mod(
-            InstallModContext {
+            patch::InstallModContext {
                 directories: self.dirs.clone(),
                 entry: entry.clone(),
             },
@@ -410,36 +422,29 @@ impl Installer {
         self.install_mod(entry);
     }
 
+    pub fn get_existing_config(&mut self) {
+        patch::get_existing_config(self.dirs.clone(), self.tx.clone());
+    }
+
+    pub fn copy_existing_config(&mut self) {
+        patch::copy_existing_config(self.dirs.clone(), self.tx.clone());
+    }
+
     pub fn patch_game_files(&mut self) {
         self.state = InstallerState::Launching;
 
-        patch::patch_game_files(
-            PatchGameFilesContext {
-                directories: self.dirs.clone(),
-            },
-            self.tx.clone(),
-        );
+        patch::patch_game_files(self.dirs.clone(), self.tx.clone());
     }
 
     pub fn unpatch_game_files(&mut self) {
         self.state = InstallerState::Launching;
 
-        patch::unpatch_game_files(
-            PatchGameFilesContext {
-                directories: self.dirs.clone(),
-            },
-            self.tx.clone(),
-        );
+        patch::unpatch_game_files(self.dirs.clone(), self.tx.clone());
     }
 
     pub fn launch_game(&mut self) {
         self.state = InstallerState::Launching;
 
-        patch::launch_game(
-            LaunchGameContext {
-                directories: self.dirs.clone(),
-            },
-            self.tx.clone(),
-        );
+        patch::launch_game(self.dirs.clone(), self.tx.clone());
     }
 }

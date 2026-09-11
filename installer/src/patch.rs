@@ -18,24 +18,20 @@ const GAME_ID: u32 = 1058830;
 
 #[allow(unused)]
 pub enum TaskContext {
-    GetDirectories(GetDirectoriesContext),
-    GetPatcher(GetPatcherContext),
+    GetDirectories(DirectoryList),
+    GetPatcher(DirectoryList),
     GetManifest(GetManifestContext),
+
     GetInstalledMods(GetInstalledModsContext),
+    GetExistingConfig(DirectoryList),
+    CopyExistingConfig(DirectoryList),
+
     InstallMod(InstallModContext),
     UninstallMod(InstallModContext),
-    PatchGameFiles(PatchGameFilesContext),
-    UnpatchGameFiles(PatchGameFilesContext),
-    LaunchGame(LaunchGameContext),
-}
 
-#[derive(Default)]
-pub struct GetDirectoriesContext {
-    pub out_directories: DirectoryList,
-}
-
-pub struct GetPatcherContext {
-    pub directories: DirectoryList,
+    PatchGameFiles(DirectoryList),
+    UnpatchGameFiles(DirectoryList),
+    LaunchGame(DirectoryList),
 }
 
 #[derive(Default)]
@@ -52,14 +48,6 @@ pub struct GetInstalledModsContext {
 pub struct InstallModContext {
     pub directories: DirectoryList,
     pub entry: ModEntry,
-}
-
-pub struct PatchGameFilesContext {
-    pub directories: DirectoryList,
-}
-
-pub struct LaunchGameContext {
-    pub directories: DirectoryList,
 }
 
 #[allow(unused)]
@@ -116,14 +104,14 @@ fn send_task_result(result: Result<(), MessageType>, ctx: TaskContext, tx: Sende
     };
 }
 
-pub fn get_directories(mut ctx: GetDirectoriesContext, tx: Sender<StatusType>) {
+pub fn get_directories(mut ctx: DirectoryList, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let _ = tx.send(StatusType::Message(MessageType::default(t!(
             "status.dirs_scan"
         ))));
 
         let result = || -> Result<(), MessageType> {
-            ctx.out_directories.app_dir = Some(
+            ctx.app_dir = Some(
                 eframe::storage_dir("SRXD Mod Manager")
                     .ok_or(MessageType::error(t!("error.app_dir")))?,
             );
@@ -132,7 +120,7 @@ pub fn get_directories(mut ctx: GetDirectoriesContext, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{}", e))
                 .map_err(|_| MessageType::error(t!("error.steam_dir")))?;
 
-            ctx.out_directories.steam_dir = Some(steam.path().to_path_buf());
+            ctx.steam_dir = Some(steam.path().to_path_buf());
 
             let (game, game_lib) = steam
                 .find_app(GAME_ID)
@@ -140,25 +128,13 @@ pub fn get_directories(mut ctx: GetDirectoriesContext, tx: Sender<StatusType>) {
                 .map_err(|_| MessageType::error(t!("error.game_dir")))?
                 .ok_or(MessageType::error(t!("error.game_dir")))?;
 
-            ctx.out_directories.game_dir = Some(game_lib.resolve_app_dir(&game));
+            ctx.game_dir = Some(game_lib.resolve_app_dir(&game));
 
             eprintln!(
                 "App: {}\nSteam: {}\nGame: {}",
-                ctx.out_directories
-                    .app_dir
-                    .as_ref()
-                    .unwrap()
-                    .to_string_lossy(),
-                ctx.out_directories
-                    .steam_dir
-                    .as_ref()
-                    .unwrap()
-                    .to_string_lossy(),
-                ctx.out_directories
-                    .game_dir
-                    .as_ref()
-                    .unwrap()
-                    .to_string_lossy()
+                ctx.app_dir.as_ref().unwrap().to_string_lossy(),
+                ctx.steam_dir.as_ref().unwrap().to_string_lossy(),
+                ctx.game_dir.as_ref().unwrap().to_string_lossy()
             );
 
             Ok(())
@@ -168,10 +144,10 @@ pub fn get_directories(mut ctx: GetDirectoriesContext, tx: Sender<StatusType>) {
     });
 }
 
-pub fn get_patcher(ctx: GetPatcherContext, tx: Sender<StatusType>) {
+pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let patcher_dir = ctx.directories.app_dir.as_ref().unwrap().join("BepInEx");
+            let patcher_dir = ctx.app_dir.as_ref().unwrap().join("BepInEx");
 
             if fs::try_exists(patcher_dir)
                 .await
@@ -209,7 +185,7 @@ pub fn get_patcher(ctx: GetPatcherContext, tx: Sender<StatusType>) {
             ))));
 
             archive
-                .extract(ctx.directories.app_dir.as_ref().unwrap())
+                .extract(ctx.app_dir.as_ref().unwrap())
                 .inspect_err(|e| eprintln!("{}", e))
                 .map_err(|_| MessageType::error(t!("error.zip_extract")))?;
 
@@ -276,8 +252,7 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
                 .app_dir
                 .as_ref()
                 .unwrap()
-                .join("BepInEx")
-                .join("plugins");
+                .join("BepInEx/plugins");
 
             fs::create_dir_all(&plugins_dir)
                 .await
@@ -307,6 +282,47 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
     });
 }
 
+pub fn get_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
+    tokio::spawn(async move {
+        let result = async || -> Result<(), MessageType> {
+            let game_config_dir = ctx.game_dir.as_ref().unwrap().join("BepInEx/config");
+
+            fs::try_exists(&game_config_dir)
+                .await
+                .map_err(|_| MessageType::default(""))?
+                .ok_or(MessageType::default(t!("")))?;
+
+            Ok(())
+        }()
+        .await;
+
+        send_task_result(result, TaskContext::GetExistingConfig(ctx), tx);
+    });
+}
+
+pub fn copy_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
+    let _ = tx.send(StatusType::Message(MessageType::default(t!(
+        "status.files_copy"
+    ))));
+
+    tokio::spawn(async move {
+        let result = async || -> Result<(), MessageType> {
+            let app_config_dir = ctx.app_dir.as_ref().unwrap().join("BepInEx/config");
+            let game_config_dir = ctx.game_dir.as_ref().unwrap().join("BepInEx/config");
+
+            copy_dir_all(game_config_dir, app_config_dir)
+                .await
+                .inspect_err(|e| eprintln!("{}", e))
+                .map_err(|_| MessageType::error(t!("error.file_copy")))?;
+
+            Ok(())
+        }()
+        .await;
+
+        send_task_result(result, TaskContext::CopyExistingConfig(ctx), tx);
+    });
+}
+
 pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let _ = tx.send(StatusType::Message(MessageType::default(t!(
@@ -323,8 +339,7 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                 .app_dir
                 .as_ref()
                 .unwrap()
-                .join("BepInEx")
-                .join("plugins")
+                .join("BepInEx/plugins")
                 .join(&version.digest);
 
             fs::create_dir_all(&plugin_dir)
@@ -403,8 +418,7 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                 .app_dir
                 .as_ref()
                 .unwrap()
-                .join("BepInEx")
-                .join("plugins")
+                .join("BepInEx/plugins")
                 .join(&version.digest);
 
             let metadata = fs::metadata(&plugin_dir)
@@ -432,121 +446,25 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
     });
 }
 
-pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
+pub fn patch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
                 "status.config_set"
             ))));
 
-            let app_dir = ctx.directories.app_dir.as_ref().unwrap();
-            let game_dir = ctx.directories.game_dir.as_ref().unwrap();
-            #[allow(unused)]
-            let steam_dir = ctx.directories.steam_dir.as_ref().unwrap();
-
-            let base_dir = game_dir.join("UnityPlayer.dll");
-            let base_renamed_dir = game_dir.join("UnityPlayer_IL2CPP.dll");
-            let mono_dir = game_dir.join("UnityPlayer_Mono.dll");
-
-            let mut doorstop = Ini::new();
-
-            doorstop
-                .load(app_dir.join("doorstop_config.ini"))
-                .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::error(t!("error.config_read")))?;
-
-            doorstop.set(
-                "General",
-                "target_assembly",
-                Some(
-                    app_dir
-                        .join("BepInEx/core/BepInEx.Preloader.dll")
-                        .to_string_lossy()
-                        .into(),
-                ),
-            );
-
-            doorstop
-                .write(app_dir.join("doorstop_config.ini"))
-                .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::error(t!("error.config_write")))?;
+            write_doorstop_config(&ctx).await?;
 
             #[cfg(target_os = "linux")]
-            'regedit: {
-                let _ = tx.send(StatusType::Message(MessageType::default(t!(
-                    "status.override_set"
-                ))));
-
-                let reg_dir = steam_dir
-                    .join("steamapps")
-                    .join("compatdata")
-                    .join(GAME_ID.to_string())
-                    .join("pfx")
-                    .join("user.reg");
-
-                if !fs::try_exists(&reg_dir).await.unwrap_or(false) {
-                    let _ = tx.send(StatusType::Message(MessageType::warning(t!(
-                        "error.config_locate"
-                    ))));
-
-                    break 'regedit;
-                }
-
-                let reg = regashii::Registry::deserialize_file(&reg_dir)
-                    .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::error(t!("error.config_read")))?
-                    .with(
-                        r"Software\Wine\DllOverrides",
-                        regashii::Key::new()
-                            .with("winhttp", regashii::Value::Sz("native,builtin"))
-                            .with("*winhttp", regashii::Value::Sz("native,builtin")),
-                    );
-
-                reg.serialize_file(&reg_dir)
-                    .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::error(t!("error.config_write")))?;
-            }
+            write_proton_override(&ctx, &tx).await?;
 
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
                 "status.files_copy"
             ))));
 
-            let base_dir_exists = fs::try_exists(&base_dir).await.unwrap_or(false);
-            let base_renamed_dir_exists = fs::try_exists(&base_renamed_dir).await.unwrap_or(false);
-            let mono_dir_exists = fs::try_exists(&mono_dir).await.unwrap_or(false);
+            rename_unity_player(&ctx, &tx).await?;
 
-            if !base_dir_exists {
-                return Err(MessageType::error(t!("error.file_locate")));
-            }
-
-            if mono_dir_exists {
-                fs::rename(&base_dir, &base_renamed_dir)
-                    .await
-                    .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::error(t!("error.file_rename")))?;
-
-                fs::rename(&mono_dir, &base_dir)
-                    .await
-                    .inspect_err(|e| eprintln!("{}", e))
-                    .map_err(|_| MessageType::error(t!("error.file_rename")))?;
-            } else if !base_renamed_dir_exists {
-                let _ = tx.send(StatusType::Message(MessageType::warning(t!(
-                    "warning.unityplayer"
-                ))));
-            }
-
-            fs::copy(
-                app_dir.join("doorstop_config.ini"),
-                game_dir.join("doorstop_config.ini"),
-            )
-            .await
-            .inspect_err(|e| eprintln!("{}", e))
-            .map_err(|_| MessageType::error(t!("error.file_copy")))?;
-
-            fs::copy(app_dir.join("winhttp.dll"), game_dir.join("winhttp.dll"))
-                .await
-                .inspect_err(|e| eprintln!("{}", e))
-                .map_err(|_| MessageType::error(t!("error.file_copy")))?;
+            copy_patch_files(&ctx).await?;
 
             Ok(())
         }()
@@ -556,14 +474,14 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
     });
 }
 
-pub fn unpatch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
+pub fn unpatch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
                 "status.files_remove"
             ))));
 
-            let game_dir = ctx.directories.game_dir.as_ref().unwrap();
+            let game_dir = ctx.game_dir.as_ref().unwrap();
 
             let _ = fs::remove_file(game_dir.join("doorstop_config.ini")).await;
             let _ = fs::remove_file(game_dir.join("winhttp.dll")).await;
@@ -576,14 +494,14 @@ pub fn unpatch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
     });
 }
 
-pub fn launch_game(ctx: LaunchGameContext, tx: Sender<StatusType>) {
+pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
             let _ = tx.send(StatusType::Message(MessageType::success(t!(
                 "status.launch_game"
             ))));
 
-            let steam_dir = ctx.directories.steam_dir.as_ref().unwrap();
+            let steam_dir = ctx.steam_dir.as_ref().unwrap();
 
             #[cfg(target_os = "windows")]
             let launch_dir = steam_dir.join("steam.exe");
@@ -604,4 +522,150 @@ pub fn launch_game(ctx: LaunchGameContext, tx: Sender<StatusType>) {
 
         send_task_result(result, TaskContext::LaunchGame(ctx), tx);
     });
+}
+
+async fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
+    let app_dir = ctx.app_dir.as_ref().unwrap();
+
+    let mut doorstop = Ini::new();
+
+    doorstop
+        .load(app_dir.join("doorstop_config.ini"))
+        .inspect_err(|e| eprintln!("{}", e))
+        .map_err(|_| MessageType::error(t!("error.config_read")))?;
+
+    doorstop.set(
+        "General",
+        "target_assembly",
+        Some(
+            app_dir
+                .join("BepInEx/core/BepInEx.Preloader.dll")
+                .to_string_lossy()
+                .into(),
+        ),
+    );
+
+    doorstop
+        .write(app_dir.join("doorstop_config.ini"))
+        .inspect_err(|e| eprintln!("{}", e))
+        .map_err(|_| MessageType::error(t!("error.config_write")))?;
+
+    Ok(())
+}
+
+#[cfg(target_os = "linux")]
+async fn write_proton_override(
+    ctx: &DirectoryList,
+    tx: &Sender<StatusType>,
+) -> Result<(), MessageType> {
+    let steam_dir = ctx.steam_dir.as_ref().unwrap();
+
+    let _ = tx.send(StatusType::Message(MessageType::default(t!(
+        "status.override_set"
+    ))));
+
+    let reg_dir = steam_dir
+        .join("steamapps/compatdata")
+        .join(GAME_ID.to_string())
+        .join("pfx/user.reg");
+
+    fs::try_exists(&reg_dir)
+        .await
+        .inspect_err(|e| eprintln!("{}", e))
+        .map_err(|_| MessageType::warning(t!("error.config_locate")))?
+        .ok_or(MessageType::warning(t!("error.config_locate")))?;
+
+    let reg = regashii::Registry::deserialize_file(&reg_dir)
+        .inspect_err(|e| eprintln!("{}", e))
+        .map_err(|_| MessageType::error(t!("error.config_read")))?
+        .with(
+            r"Software\Wine\DllOverrides",
+            regashii::Key::new()
+                .with("winhttp", regashii::Value::Sz("native,builtin"))
+                .with("*winhttp", regashii::Value::Sz("native,builtin")),
+        );
+
+    reg.serialize_file(&reg_dir)
+        .inspect_err(|e| eprintln!("{}", e))
+        .map_err(|_| MessageType::error(t!("error.config_write")))?;
+
+    Ok(())
+}
+
+async fn rename_unity_player(
+    ctx: &DirectoryList,
+    tx: &Sender<StatusType>,
+) -> Result<(), MessageType> {
+    let game_dir = ctx.game_dir.as_ref().unwrap();
+
+    let base_dir = game_dir.join("UnityPlayer.dll");
+    let base_renamed_dir = game_dir.join("UnityPlayer_IL2CPP.dll");
+    let mono_dir = game_dir.join("UnityPlayer_Mono.dll");
+
+    let base_dir_exists = fs::try_exists(&base_dir).await.unwrap_or(false);
+    let base_renamed_dir_exists = fs::try_exists(&base_renamed_dir).await.unwrap_or(false);
+    let mono_dir_exists = fs::try_exists(&mono_dir).await.unwrap_or(false);
+
+    if !base_dir_exists {
+        return Err(MessageType::error(t!("error.file_locate")));
+    }
+
+    if mono_dir_exists {
+        fs::rename(&base_dir, &base_renamed_dir)
+            .await
+            .inspect_err(|e| eprintln!("{}", e))
+            .map_err(|_| MessageType::error(t!("error.file_rename")))?;
+
+        fs::rename(&mono_dir, &base_dir)
+            .await
+            .inspect_err(|e| eprintln!("{}", e))
+            .map_err(|_| MessageType::error(t!("error.file_rename")))?;
+    } else if !base_renamed_dir_exists {
+        let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+            "warning.unityplayer"
+        ))));
+    }
+
+    Ok(())
+}
+
+async fn copy_patch_files(ctx: &DirectoryList) -> Result<(), MessageType> {
+    let app_dir = ctx.app_dir.as_ref().unwrap();
+    let game_dir = ctx.game_dir.as_ref().unwrap();
+
+    fs::copy(
+        app_dir.join("doorstop_config.ini"),
+        game_dir.join("doorstop_config.ini"),
+    )
+    .await
+    .inspect_err(|e| eprintln!("{}", e))
+    .map_err(|_| MessageType::error(t!("error.file_copy")))?;
+
+    fs::copy(app_dir.join("winhttp.dll"), game_dir.join("winhttp.dll"))
+        .await
+        .inspect_err(|e| eprintln!("{}", e))
+        .map_err(|_| MessageType::error(t!("error.file_copy")))?;
+
+    Ok(())
+}
+
+async fn copy_dir_all(
+    src: impl AsRef<std::path::Path>,
+    dst: impl AsRef<std::path::Path>,
+) -> std::io::Result<()> {
+    fs::create_dir_all(&dst).await?;
+    let mut entries = fs::read_dir(src).await?;
+    while let Some(entry) = &entries.next_entry().await? {
+        let ty = entry.file_type().await?;
+        if ty.is_dir() {
+            std::boxed::Box::pin(copy_dir_all(
+                entry.path(),
+                dst.as_ref().join(entry.file_name()),
+            ))
+            .await?;
+        } else {
+            fs::copy(entry.path(), dst.as_ref().join(entry.file_name())).await?;
+        }
+    }
+    Ok(())
 }
