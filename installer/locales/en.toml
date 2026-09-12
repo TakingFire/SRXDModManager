@@ -25,13 +25,13 @@ author = "Author"
 author = "by %{name}"
 unknown = "Unknown"
 
-[modentry.button]
-install = "Install"
-downloading = "Downloading"
-uninstall = "Uninstall"
-removing = "Removing"
-update = "Update"
-open_folder = "Open Folder"
+  [modentry.button]
+  install = "Install"
+  downloading = "Downloading"
+  uninstall = "Uninstall"
+  removing = "Removing"
+  update = "Update"
+  open_folder = "Open Folder"
 
 [popup.outdated]
 title = "Update Required"
