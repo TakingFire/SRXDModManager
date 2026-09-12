@@ -1,0 +1,3 @@
+files:
+  - source: /installer/locales/en.toml
+    translation: /installer/locales/%two_letters_code%.toml
