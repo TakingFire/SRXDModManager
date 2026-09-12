@@ -1,13 +1,11 @@
-use std::{collections::HashSet, time::Duration};
-
 use eframe::egui::{
     self, CentralPanel, Color32, ComboBox, Frame, Id, Modal, OpenUrl, Panel, RichText, ScrollArea,
     Stroke, TextEdit, Ui,
 };
 
 use crate::app::{Installer, InstallerState, ModEntry, ModEntryRef, ModEntryState};
+use crate::config::{FilterBy, PopupState, SortBy};
 
-#[allow(unused)]
 const GUIDE_URL: &str = "https://useredge.github.io/spinshare-wiki/modding/installation-guide/";
 const UPDATE_URL: &str = "https://github.com/TakingFire/SRXDModManager/releases/latest";
 const ISSUES_URL: &str = "https://github.com/TakingFire/SRXDModManager/issues/new";
@@ -16,47 +14,22 @@ const ISSUES_URL: &str = "https://github.com/TakingFire/SRXDModManager/issues/ne
 pub struct Gui {
     pub installer: Installer,
 
-    categories: HashSet<String>,
-    filter_by: FilterBy,
-    sort_by: SortBy,
-    search: String,
-
     filtered_mods: Vec<ModEntryRef>,
     updatable_mods: Vec<ModEntryRef>,
     unrecognized_mods: Vec<ModEntryRef>,
 
-    show_disclaimer: bool,
     disclaimer_checkbox: bool,
-    show_linux_guide: bool,
-    #[allow(unused)]
     linux_guide_checkbox: bool,
-    show_config_popup: bool,
-    config_popup_checkbox: bool,
+    existing_config_checkbox: bool,
 
     initialized: bool,
     show_debug: bool,
 }
 
-#[derive(Debug, Default, PartialEq, Copy, Clone)]
-enum FilterBy {
-    #[default]
-    All,
-    Installed,
-    Uninstalled,
-    Updatable,
-    Unrecognized,
-}
-
-#[derive(Debug, Default, PartialEq, Copy, Clone)]
-enum SortBy {
-    Recent,
-    #[default]
-    Title,
-    Author,
-}
-
 impl eframe::App for Gui {
-    fn on_exit(&mut self, _gl: Option<&eframe::glow::Context>) {}
+    fn save(&mut self, storage: &mut dyn eframe::Storage) {
+        eframe::set_value(storage, "config", &self.installer.config);
+    }
 
     fn logic(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame) {
         ctx.input(|input| {
@@ -64,16 +37,15 @@ impl eframe::App for Gui {
         });
 
         if !self.initialized {
-            ctx.set_fonts(load_font());
-            if let Some(storage) = frame.storage() {
-                self.show_disclaimer = storage.get_string("show_disclaimer").is_none();
-                #[cfg(not(target_os = "windows"))]
-                {
-                    self.show_linux_guide = storage.get_string("show_linux_guide").is_none();
-                }
-                self.show_config_popup = storage.get_string("show_config_popup").is_none();
+            if let Some(storage) = frame.storage_mut() {
+                self.load(storage);
             }
+            ctx.set_fonts(load_font());
             self.build_list();
+
+            self.installer.config.popup_linux_guide.enable();
+            self.installer.config.popup_disclaimer.enable();
+
             self.initialized = true;
         }
 
@@ -86,22 +58,19 @@ impl eframe::App for Gui {
         }
     }
 
-    fn ui(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+    fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
+        let config = &mut self.installer.config;
+
         if matches!(self.installer.state, InstallerState::Outdated) {
             self.draw_outdated_warning(ui);
-        } else {
-            #[cfg(not(target_os = "windows"))]
-            if self.show_linux_guide {
-                self.draw_linux_guide(ui, frame);
-            }
-
-            if self.show_disclaimer && !self.show_linux_guide {
-                self.draw_disclaimer(ui, frame);
-            }
-
-            if self.installer.show_config_popup && self.show_config_popup && !self.show_disclaimer {
-                self.draw_config_popup(ui, frame);
-            }
+        } else if cfg!(not(target_os = "windows"))
+            && matches!(config.popup_linux_guide, PopupState::Active)
+        {
+            self.draw_linux_guide(ui);
+        } else if matches!(config.popup_disclaimer, PopupState::Active) {
+            self.draw_disclaimer(ui);
+        } else if matches!(config.popup_existing_config, PopupState::Active) {
+            self.draw_config_popup(ui);
         }
 
         if matches!(self.installer.state, InstallerState::Error) {
@@ -120,11 +89,17 @@ impl eframe::App for Gui {
 
         self.draw_mod_list(ui);
 
-        ui.request_repaint_after(Duration::from_millis(100));
+        ui.request_repaint_after(std::time::Duration::from_millis(100));
     }
 }
 
 impl Gui {
+    fn load(&mut self, storage: &mut dyn eframe::Storage) {
+        if let Some(config) = eframe::get_value(storage, "config") {
+            self.installer.config = config;
+        }
+    }
+
     fn draw_outdated_warning(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(240.0);
@@ -142,7 +117,7 @@ impl Gui {
         });
     }
 
-    fn draw_disclaimer(&mut self, ui: &Ui, frame: &mut eframe::Frame) {
+    fn draw_disclaimer(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(220.0);
             ui.vertical_centered(|ui| {
@@ -154,11 +129,10 @@ impl Gui {
 
                 ui.vertical_centered_justified(|ui| {
                     if ui.button(t!("popup.disclaimer.button")).clicked() {
-                        self.show_disclaimer = false;
-                        if self.disclaimer_checkbox
-                            && let Some(storage) = frame.storage_mut()
-                        {
-                            storage.set_string("show_disclaimer", "false".into());
+                        if self.disclaimer_checkbox {
+                            self.installer.config.popup_disclaimer.disable();
+                        } else {
+                            self.installer.config.popup_disclaimer.dismiss();
                         }
                     }
                 });
@@ -166,8 +140,7 @@ impl Gui {
         });
     }
 
-    #[cfg(not(target_os = "windows"))]
-    fn draw_linux_guide(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+    fn draw_linux_guide(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_linux_guide")).show(ui, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
@@ -184,11 +157,10 @@ impl Gui {
 
                 ui.vertical_centered_justified(|ui| {
                     if ui.button(t!("popup.linux.button")).clicked() {
-                        self.show_linux_guide = false;
-                        if self.linux_guide_checkbox
-                            && let Some(storage) = frame.storage_mut()
-                        {
-                            storage.set_string("show_linux_guide", "false".into());
+                        if self.linux_guide_checkbox {
+                            self.installer.config.popup_linux_guide.disable();
+                        } else {
+                            self.installer.config.popup_linux_guide.dismiss();
                         }
                     }
                 });
@@ -196,7 +168,7 @@ impl Gui {
         });
     }
 
-    fn draw_config_popup(&mut self, ui: &Ui, frame: &mut eframe::Frame) {
+    fn draw_config_popup(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_config")).show(ui, |ui| {
             ui.set_width(220.0);
             ui.vertical_centered(|ui| {
@@ -205,26 +177,25 @@ impl Gui {
                 ui.label(t!("popup.existing_config.text2"));
 
                 ui.add_space(8.0);
-                ui.checkbox(&mut self.config_popup_checkbox, t!("button.disable_popup"));
+                ui.checkbox(
+                    &mut self.existing_config_checkbox,
+                    t!("button.disable_popup"),
+                );
 
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
                         if ui.button(t!("popup.existing_config.btn_cancel")).clicked() {
-                            self.installer.show_config_popup = false;
-                            if self.config_popup_checkbox
-                                && let Some(storage) = frame.storage_mut()
-                            {
-                                storage.set_string("show_config_popup", "false".into());
+                            if self.existing_config_checkbox {
+                                self.installer.config.popup_existing_config.disable();
+                            } else {
+                                self.installer.config.popup_existing_config.dismiss();
                             }
                         }
                     });
 
                     cols[1].vertical_centered_justified(|ui| {
                         if ui.button(t!("popup.existing_config.btn_copy")).clicked() {
-                            self.installer.show_config_popup = false;
-                            if let Some(storage) = frame.storage_mut() {
-                                storage.set_string("show_config_popup", "false".into());
-                            }
+                            self.installer.config.popup_existing_config.disable();
                             self.installer.copy_existing_config();
                         }
                     });
@@ -258,7 +229,7 @@ impl Gui {
                     .color(Color32::from_rgb(90, 170, 255)),
                 );
                 if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
-                    self.filter_by = FilterBy::Updatable;
+                    self.installer.config.filter_by = FilterBy::Updatable;
                     self.installer.force_ui_update = true;
                 }
                 if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
@@ -286,7 +257,7 @@ impl Gui {
                         .small_button(t!("popup.mod_unrecognized.btn_show"))
                         .clicked()
                     {
-                        self.filter_by = FilterBy::Unrecognized;
+                        self.installer.config.filter_by = FilterBy::Unrecognized;
                         self.installer.force_ui_update = true;
                     }
                     if ui
@@ -335,28 +306,30 @@ impl Gui {
                         Frame::group(ui.style())
                             .fill(ui.visuals().window_fill + Color32::from_gray(6))
                             .show(ui, |ui| {
+                                let config = &mut self.installer.config;
+
                                 if ui
                                     .toggle_value(
-                                        &mut self.categories.is_empty(),
+                                        &mut config.categories.is_empty(),
                                         t!("label.category_all"),
                                     )
                                     .clicked()
                                 {
-                                    self.categories.clear();
+                                    config.categories.clear();
                                     self.installer.force_ui_update = true;
                                 }
-                                for category in &self.installer.manifest.categories {
+                                for category in &config.manifest.categories {
                                     if ui
                                         .toggle_value(
-                                            &mut self.categories.contains(category),
-                                            category,
+                                            &mut config.categories.contains(category),
+                                            category.clone(),
                                         )
                                         .clicked()
                                     {
-                                        if self.categories.contains(category) {
-                                            self.categories.remove(category);
+                                        if config.categories.contains(category) {
+                                            config.categories.remove(category);
                                         } else {
-                                            self.categories.insert(category.to_owned());
+                                            config.categories.insert(category.to_owned());
                                         }
                                         self.installer.force_ui_update = true;
                                     }
@@ -435,7 +408,7 @@ impl Gui {
                                 ui.columns(column_count, |cols| {
                                     for (col, ui) in cols.iter_mut().enumerate() {
                                         for row in 0..entries_per_column {
-                                            let entry = row + col * entries_per_column;
+                                            let entry = row * column_count + col;
                                             if entry >= self.filtered_mods.len() {
                                                 break;
                                             }
@@ -454,19 +427,25 @@ impl Gui {
     }
 
     fn draw_filter_bar(&mut self, ui: &mut Ui) {
-        let filter_by_before = self.filter_by;
-        let sort_by_before = self.sort_by;
+        let config = &mut self.installer.config;
+
+        let filter_by_before = config.filter_by;
+        let sort_by_before = config.sort_by;
 
         ui.take_available_space();
         ui.horizontal(|ui| {
-            ui.selectable_value(&mut self.filter_by, FilterBy::All, t!("config.filter.all"));
             ui.selectable_value(
-                &mut self.filter_by,
+                &mut config.filter_by,
+                FilterBy::All,
+                t!("config.filter.all"),
+            );
+            ui.selectable_value(
+                &mut config.filter_by,
                 FilterBy::Installed,
                 t!("config.filter.installed"),
             );
             ui.selectable_value(
-                &mut self.filter_by,
+                &mut config.filter_by,
                 FilterBy::Uninstalled,
                 t!("config.filter.uninstalled"),
             );
@@ -474,33 +453,37 @@ impl Gui {
             ui.label(t!("label.sort"));
             let _ = ComboBox::from_id_salt("ui_sort")
                 .width(80.0)
-                .selected_text(match self.sort_by {
+                .selected_text(match config.sort_by {
                     SortBy::Recent => t!("config.sort.recent"),
                     SortBy::Title => t!("config.sort.title"),
                     SortBy::Author => t!("config.sort.author"),
                 })
                 .show_ui(ui, |ui| {
                     ui.selectable_value(
-                        &mut self.sort_by,
+                        &mut config.sort_by,
                         SortBy::Recent,
                         t!("config.sort.recent"),
                     );
-                    ui.selectable_value(&mut self.sort_by, SortBy::Title, t!("config.sort.title"));
                     ui.selectable_value(
-                        &mut self.sort_by,
+                        &mut config.sort_by,
+                        SortBy::Title,
+                        t!("config.sort.title"),
+                    );
+                    ui.selectable_value(
+                        &mut config.sort_by,
                         SortBy::Author,
                         t!("config.sort.author"),
                     );
                 });
             if ui
-                .add(TextEdit::singleline(&mut self.search).hint_text(t!("label.search")))
+                .add(TextEdit::singleline(&mut config.search).hint_text(t!("label.search")))
                 .changed()
             {
                 self.installer.force_ui_update = true;
             }
         });
 
-        if self.filter_by != filter_by_before || self.sort_by != sort_by_before {
+        if config.filter_by != filter_by_before || config.sort_by != sort_by_before {
             self.installer.force_ui_update = true;
         }
     }
@@ -667,6 +650,8 @@ impl Gui {
     }
 
     fn build_list(&mut self) {
+        let config = &mut self.installer.config;
+
         self.updatable_mods = self
             .installer
             .mods
@@ -698,9 +683,9 @@ impl Gui {
                     .entry
                     .name
                     .to_ascii_lowercase()
-                    .contains(self.search.to_ascii_lowercase().trim())
+                    .contains(config.search.to_ascii_lowercase().trim())
             })
-            .filter(|entry| match self.filter_by {
+            .filter(|entry| match config.filter_by {
                 FilterBy::All => true,
                 FilterBy::Installed => matches!(
                     entry.borrow().state,
@@ -719,7 +704,8 @@ impl Gui {
                 FilterBy::Unrecognized => !entry.borrow().recognized,
             })
             .filter(|entry| {
-                self.categories
+                config
+                    .categories
                     .iter()
                     .all(|category| entry.borrow().entry.categories.contains(category))
             })
@@ -730,7 +716,7 @@ impl Gui {
         self.filtered_mods.sort_by(|a, b| {
             let a = a.borrow();
             let b = b.borrow();
-            match self.sort_by {
+            match config.sort_by {
                 SortBy::Recent => b.entry.versions[0]
                     .created_at
                     .cmp(&a.entry.versions[0].created_at),

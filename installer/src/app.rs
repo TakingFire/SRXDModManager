@@ -1,9 +1,12 @@
 use std::{cell::RefCell, collections::HashMap, path::PathBuf, rc::Rc};
 
 use flume::{Receiver, Sender};
-use model::{Manifest, Mod, Version};
+use model::{Mod, Version};
 
-use crate::patch::{self, MessageType, StatusType};
+use crate::{
+    config::{self, InstallerConfig},
+    patch::{self, MessageType, StatusType},
+};
 
 #[derive(Debug, Default, Clone)]
 pub enum ModEntryState {
@@ -66,17 +69,17 @@ pub enum InstallerState {
 
 pub struct Installer {
     pub state: InstallerState,
-    pub tx: Sender<StatusType>,
-    pub rx: Receiver<StatusType>,
+    pub config: InstallerConfig,
     pub dirs: DirectoryList,
     pub mods: Vec<ModEntryRef>,
-    pub manifest: Manifest,
-    pub id_map: HashMap<String, ModEntryRef>,
-    pub digest_map: HashMap<String, (ModEntryRef, usize)>,
     pub log: Vec<MessageType>,
 
     pub force_ui_update: bool,
-    pub show_config_popup: bool,
+
+    tx: Sender<StatusType>,
+    rx: Receiver<StatusType>,
+    id_map: HashMap<String, ModEntryRef>,
+    digest_map: HashMap<String, (ModEntryRef, usize)>,
 }
 
 impl Default for Installer {
@@ -85,17 +88,17 @@ impl Default for Installer {
 
         Self {
             state: InstallerState::default(),
-            tx,
-            rx,
+            config: InstallerConfig::default(),
             dirs: DirectoryList::default(),
             mods: Vec::default(),
-            manifest: Manifest::default(),
-            id_map: HashMap::default(),
-            digest_map: HashMap::default(),
             log: Vec::default(),
 
             force_ui_update: false,
-            show_config_popup: false,
+
+            tx,
+            rx,
+            id_map: HashMap::default(),
+            digest_map: HashMap::default(),
         }
     }
 }
@@ -120,7 +123,7 @@ impl Installer {
                     }
 
                     patch::TaskContext::GetManifest(ctx) => {
-                        self.manifest = ctx.out_manifest;
+                        self.config.manifest = ctx.out_manifest;
                         self.build_mod_list();
                         self.build_id_digest_maps();
 
@@ -198,7 +201,7 @@ impl Installer {
 
                     patch::TaskContext::GetExistingConfig(_) => {
                         self.log(MessageType::default(t!("status.config_found")));
-                        self.show_config_popup = true;
+                        self.config.popup_existing_config.enable();
                     }
 
                     patch::TaskContext::CopyExistingConfig(_) => {
@@ -248,6 +251,8 @@ impl Installer {
                     patch::TaskContext::GetManifest(ctx) => {
                         if ctx.out_outdated {
                             self.state = InstallerState::Outdated;
+                        } else if !self.config.manifest.mods.is_empty() {
+                            self.get_patcher();
                         } else {
                             self.state = InstallerState::Error;
                         }
@@ -301,6 +306,9 @@ impl Installer {
     }
 
     pub fn build_id_digest_maps(&mut self) {
+        self.id_map.clear();
+        self.digest_map.clear();
+
         for entry_ref in &self.mods {
             let entry = &entry_ref.borrow().entry;
             self.id_map.insert(entry.id.clone(), entry_ref.clone());
@@ -312,7 +320,9 @@ impl Installer {
     }
 
     pub fn build_mod_list(&mut self) {
-        for entry in &self.manifest.mods {
+        self.mods.clear();
+
+        for entry in &self.config.manifest.mods {
             self.mods.push(Rc::new(RefCell::new(ModEntry {
                 entry: entry.clone(),
                 selected_version: 0,
@@ -335,7 +345,12 @@ impl Installer {
         patch::get_patcher(self.dirs.clone(), self.tx.clone());
     }
 
-    pub fn get_manifest(&self) {
+    pub fn get_manifest(&mut self) {
+        if !self.config.manifest.mods.is_empty() {
+            self.build_mod_list();
+            self.build_id_digest_maps();
+        }
+
         patch::get_manifest(patch::GetManifestContext::default(), self.tx.clone());
     }
 
