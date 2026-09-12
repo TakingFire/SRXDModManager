@@ -8,6 +8,8 @@ mod patch;
 #[macro_use]
 extern crate rust_i18n;
 i18n!("locales", fallback = "en");
+use rust_i18n::set_locale;
+use sys_locale::get_locale;
 
 use crate::app::Installer;
 use crate::gui::Gui;
@@ -15,6 +17,8 @@ use crate::gui::Gui;
 fn main() -> eframe::Result {
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _guard = rt.enter();
+
+    set_locale(&get_locale().unwrap_or_else(|| String::from("en")));
 
     let mut installer = Installer::default();
     installer.init();
@@ -31,7 +35,7 @@ fn main() -> eframe::Result {
                 width: 64,
                 height: 64,
             })
-            .with_inner_size([600.0, 400.0])
+            .with_inner_size([600.0, 440.0])
             .with_resizable(true)
             .with_active(true),
         ..Default::default()
