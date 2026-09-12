@@ -84,24 +84,24 @@ impl MessageType {
 
     pub fn text(&self) -> RichText {
         match self {
-            MessageType::Default(s) => RichText::new(s),
-            MessageType::Success(s) => RichText::new(s).color(Color32::from_rgb(90, 170, 255)),
-            MessageType::Warning(s) => RichText::new(s).color(Color32::from_rgb(255, 160, 80)),
-            MessageType::Error(s) => RichText::new(s).color(Color32::RED),
+            Self::Default(s) => RichText::new(s),
+            Self::Success(s) => RichText::new(s).color(Color32::from_rgb(90, 170, 255)),
+            Self::Warning(s) => RichText::new(s).color(Color32::from_rgb(255, 160, 80)),
+            Self::Error(s) => RichText::new(s).color(Color32::RED),
         }
     }
 }
 
-fn send_task_result(result: Result<(), MessageType>, ctx: TaskContext, tx: Sender<StatusType>) {
+fn send_task_result(result: Result<(), MessageType>, ctx: TaskContext, tx: &Sender<StatusType>) {
     match result {
-        Ok(_) => {
+        Ok(()) => {
             let _ = tx.send(StatusType::Success(ctx));
         }
         Err(msg) => {
             let _ = tx.send(StatusType::Message(msg));
             let _ = tx.send(StatusType::Error(ctx));
         }
-    };
+    }
 }
 
 pub fn get_directories(mut ctx: DirectoryList, tx: Sender<StatusType>) {
@@ -113,20 +113,20 @@ pub fn get_directories(mut ctx: DirectoryList, tx: Sender<StatusType>) {
         let result = || -> Result<(), MessageType> {
             ctx.app_dir = Some(
                 eframe::storage_dir("SRXD Mod Manager")
-                    .ok_or(MessageType::error(t!("error.app_dir")))?,
+                    .ok_or_else(|| MessageType::error(t!("error.app_dir")))?,
             );
 
             let steam = steamlocate::SteamDir::locate()
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.steam_dir")))?;
 
             ctx.steam_dir = Some(steam.path().to_path_buf());
 
             let (game, game_lib) = steam
                 .find_app(GAME_ID)
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.game_dir")))?
-                .ok_or(MessageType::error(t!("error.game_dir")))?;
+                .ok_or_else(|| MessageType::error(t!("error.game_dir")))?;
 
             ctx.game_dir = Some(game_lib.resolve_app_dir(&game));
 
@@ -140,7 +140,7 @@ pub fn get_directories(mut ctx: DirectoryList, tx: Sender<StatusType>) {
             Ok(())
         }();
 
-        send_task_result(result, TaskContext::GetDirectories(ctx), tx);
+        send_task_result(result, TaskContext::GetDirectories(ctx), &tx);
     });
 }
 
@@ -151,7 +151,7 @@ pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
 
             if fs::try_exists(patcher_dir)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_locate")))?
             {
                 let _ = tx.send(StatusType::Message(MessageType::default(t!(
@@ -167,17 +167,17 @@ pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
 
             let download = reqwest::get(PATCHER_URL)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.download")))?;
 
             let mut archive = zip::ZipArchive::new(std::io::Cursor::new(
                 download
                     .bytes()
                     .await
-                    .inspect_err(|e| eprintln!("{}", e))
+                    .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.file_read")))?,
             ))
-            .inspect_err(|e| eprintln!("{}", e))
+            .inspect_err(|e| eprintln!("{e}"))
             .map_err(|_| MessageType::error(t!("error.zip_read")))?;
 
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
@@ -186,14 +186,14 @@ pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
 
             archive
                 .extract(ctx.app_dir.as_ref().unwrap())
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.zip_extract")))?;
 
             Ok(())
         }()
         .await;
 
-        send_task_result(result, TaskContext::GetPatcher(ctx), tx);
+        send_task_result(result, TaskContext::GetPatcher(ctx), &tx);
     });
 }
 
@@ -206,37 +206,36 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
         let result = async || -> Result<(), MessageType> {
             let res = reqwest::get(MANIFEST_URL)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.web_request")))?
                 .text()
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|err| MessageType::error(err.to_string()))?;
 
             let manifest: Value = serde_json::from_str(&res)
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
             ctx.out_outdated = manifest
                 .get("version")
                 .and_then(|version| version.as_str())
-                .map(|version| {
+                .is_some_and(|version| {
                     matches!(
                         natord::compare_ignore_case(version, &model::get_version()),
                         Ordering::Greater
                     )
-                })
-                .unwrap_or(false);
+                });
 
             ctx.out_manifest = serde_json::from_value(manifest)
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
             Ok(())
         }()
         .await;
 
-        send_task_result(result, TaskContext::GetManifest(ctx), tx);
+        send_task_result(result, TaskContext::GetManifest(ctx), &tx);
     });
 }
 
@@ -256,18 +255,18 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
 
             fs::create_dir_all(&plugins_dir)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_create")))?;
 
             let mut entries = fs::read_dir(plugins_dir)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_open")))?;
 
             while let Some(entry) = entries
                 .next_entry()
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?
             {
                 ctx.out_digest_list
@@ -278,7 +277,7 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
         }()
         .await;
 
-        send_task_result(result, TaskContext::GetInstalledMods(ctx), tx);
+        send_task_result(result, TaskContext::GetInstalledMods(ctx), &tx);
     });
 }
 
@@ -290,13 +289,13 @@ pub fn get_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
             fs::try_exists(&game_config_dir)
                 .await
                 .map_err(|_| MessageType::default(""))?
-                .ok_or(MessageType::default(t!("")))?;
+                .ok_or_else(|| MessageType::default(t!("")))?;
 
             Ok(())
         }()
         .await;
 
-        send_task_result(result, TaskContext::GetExistingConfig(ctx), tx);
+        send_task_result(result, TaskContext::GetExistingConfig(ctx), &tx);
     });
 }
 
@@ -312,14 +311,14 @@ pub fn copy_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
 
             copy_dir_all(game_config_dir, app_config_dir)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
             Ok(())
         }()
         .await;
 
-        send_task_result(result, TaskContext::CopyExistingConfig(ctx), tx);
+        send_task_result(result, TaskContext::CopyExistingConfig(ctx), &tx);
     });
 }
 
@@ -333,7 +332,7 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
         let result = async || -> Result<(), MessageType> {
             let version = &ctx.entry.entry.versions[ctx.entry.selected_version];
 
-            let plugin_name = ctx.entry.entry.file.replace("*", "");
+            let plugin_name = ctx.entry.entry.file.replace('*', "");
             let plugin_dir = ctx
                 .directories
                 .app_dir
@@ -344,33 +343,33 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
 
             fs::create_dir_all(&plugin_dir)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_create")))?;
 
-            let download = reqwest::get(version.url.to_owned())
+            let download = reqwest::get(version.url.clone())
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.download")))?;
 
             match plugin_name
-                .split(".")
-                .last()
-                .ok_or(MessageType::error(t!("error.file_format")))?
+                .split('.')
+                .next_back()
+                .ok_or_else(|| MessageType::error(t!("error.file_format")))?
             {
                 "zip" => {
                     let mut archive = zip::ZipArchive::new(std::io::Cursor::new(
                         download
                             .bytes()
                             .await
-                            .inspect_err(|e| eprintln!("{}", e))
+                            .inspect_err(|e| eprintln!("{e}"))
                             .map_err(|_| MessageType::error(t!("error.file_read")))?,
                     ))
-                    .inspect_err(|e| eprintln!("{}", e))
+                    .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.zip_read")))?;
 
                     archive
                         .extract(&plugin_dir)
-                        .inspect_err(|e| eprintln!("{}", e))
+                        .inspect_err(|e| eprintln!("{e}"))
                         .map_err(|_| MessageType::error(t!("error.zip_extract")))?;
                 }
 
@@ -380,11 +379,11 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                         download
                             .bytes()
                             .await
-                            .inspect_err(|e| eprintln!("{}", e))
+                            .inspect_err(|e| eprintln!("{e}"))
                             .map_err(|_| MessageType::error(t!("error.file_read")))?,
                     )
                     .await
-                    .inspect_err(|e| eprintln!("{}", e))
+                    .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.file_write")))?;
                 }
                 _ => {}
@@ -394,7 +393,7 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
         }()
         .await;
 
-        send_task_result(result, TaskContext::InstallMod(ctx), tx);
+        send_task_result(result, TaskContext::InstallMod(ctx), &tx);
     });
 }
 
@@ -423,18 +422,18 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
 
             let metadata = fs::metadata(&plugin_dir)
                 .await
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_locate")))?;
 
             if metadata.is_dir() {
                 fs::remove_dir_all(&plugin_dir)
                     .await
-                    .inspect_err(|e| eprintln!("{}", e))
+                    .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.file_delete")))?;
             } else {
                 fs::remove_file(&plugin_dir)
                     .await
-                    .inspect_err(|e| eprintln!("{}", e))
+                    .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.file_delete")))?;
             }
 
@@ -442,7 +441,7 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
         }()
         .await;
 
-        send_task_result(result, TaskContext::UninstallMod(ctx), tx);
+        send_task_result(result, TaskContext::UninstallMod(ctx), &tx);
     });
 }
 
@@ -453,7 +452,7 @@ pub fn patch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
                 "status.config_set"
             ))));
 
-            write_doorstop_config(&ctx).await?;
+            write_doorstop_config(&ctx)?;
 
             #[cfg(target_os = "linux")]
             write_proton_override(&ctx, &tx).await?;
@@ -470,7 +469,7 @@ pub fn patch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
         }()
         .await;
 
-        send_task_result(result, TaskContext::PatchGameFiles(ctx), tx);
+        send_task_result(result, TaskContext::PatchGameFiles(ctx), &tx);
     });
 }
 
@@ -490,7 +489,7 @@ pub fn unpatch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
         }()
         .await;
 
-        send_task_result(result, TaskContext::PatchGameFiles(ctx), tx);
+        send_task_result(result, TaskContext::PatchGameFiles(ctx), &tx);
     });
 }
 
@@ -511,7 +510,7 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
             let _process = std::process::Command::new(launch_dir)
                 .args(["-applaunch", &GAME_ID.to_string()])
                 .spawn()
-                .inspect_err(|e| eprintln!("{}", e))
+                .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.launch_game")))?;
 
             tokio::time::sleep(Duration::from_secs(4)).await;
@@ -520,18 +519,18 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
         }()
         .await;
 
-        send_task_result(result, TaskContext::LaunchGame(ctx), tx);
+        send_task_result(result, TaskContext::LaunchGame(ctx), &tx);
     });
 }
 
-async fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
+fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
     let app_dir = ctx.app_dir.as_ref().unwrap();
 
     let mut doorstop = Ini::new();
 
     doorstop
         .load(app_dir.join("doorstop_config.ini"))
-        .inspect_err(|e| eprintln!("{}", e))
+        .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.config_read")))?;
 
     doorstop.set(
@@ -547,7 +546,7 @@ async fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
 
     doorstop
         .write(app_dir.join("doorstop_config.ini"))
-        .inspect_err(|e| eprintln!("{}", e))
+        .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.config_write")))?;
 
     Ok(())
@@ -571,12 +570,12 @@ async fn write_proton_override(
 
     fs::try_exists(&reg_dir)
         .await
-        .inspect_err(|e| eprintln!("{}", e))
+        .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::warning(t!("error.config_locate")))?
-        .ok_or(MessageType::warning(t!("error.config_locate")))?;
+        .ok_or_else(|| MessageType::warning(t!("error.config_locate")))?;
 
     let reg = regashii::Registry::deserialize_file(&reg_dir)
-        .inspect_err(|e| eprintln!("{}", e))
+        .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.config_read")))?
         .with(
             r"Software\Wine\DllOverrides",
@@ -586,7 +585,7 @@ async fn write_proton_override(
         );
 
     reg.serialize_file(&reg_dir)
-        .inspect_err(|e| eprintln!("{}", e))
+        .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.config_write")))?;
 
     Ok(())
@@ -613,12 +612,12 @@ async fn rename_unity_player(
     if mono_dir_exists {
         fs::rename(&base_dir, &base_renamed_dir)
             .await
-            .inspect_err(|e| eprintln!("{}", e))
+            .inspect_err(|e| eprintln!("{e}"))
             .map_err(|_| MessageType::error(t!("error.file_rename")))?;
 
         fs::rename(&mono_dir, &base_dir)
             .await
-            .inspect_err(|e| eprintln!("{}", e))
+            .inspect_err(|e| eprintln!("{e}"))
             .map_err(|_| MessageType::error(t!("error.file_rename")))?;
     } else if !base_renamed_dir_exists {
         let _ = tx.send(StatusType::Message(MessageType::warning(t!(
@@ -638,12 +637,12 @@ async fn copy_patch_files(ctx: &DirectoryList) -> Result<(), MessageType> {
         game_dir.join("doorstop_config.ini"),
     )
     .await
-    .inspect_err(|e| eprintln!("{}", e))
+    .inspect_err(|e| eprintln!("{e}"))
     .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
     fs::copy(app_dir.join("winhttp.dll"), game_dir.join("winhttp.dll"))
         .await
-        .inspect_err(|e| eprintln!("{}", e))
+        .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
     Ok(())

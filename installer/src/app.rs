@@ -41,10 +41,10 @@ impl ModEntry {
 
         match self.state {
             ModEntryState::Installed => {
-                self.state = ModEntryState::PendingVersionChangeFrom(self.selected_version)
+                self.state = ModEntryState::PendingVersionChangeFrom(self.selected_version);
             }
             ModEntryState::PendingVersionChangeFrom(prev) if version == prev => {
-                self.state = ModEntryState::Installed
+                self.state = ModEntryState::Installed;
             }
 
             _ => {}
@@ -84,15 +84,15 @@ impl Default for Installer {
         let (tx, rx) = flume::unbounded();
 
         Self {
-            state: Default::default(),
+            state: InstallerState::default(),
             tx,
             rx,
-            dirs: Default::default(),
-            mods: Default::default(),
-            manifest: Default::default(),
-            id_map: Default::default(),
-            digest_map: Default::default(),
-            log: Default::default(),
+            dirs: DirectoryList::default(),
+            mods: Vec::default(),
+            manifest: Manifest::default(),
+            id_map: HashMap::default(),
+            digest_map: HashMap::default(),
+            log: Vec::default(),
 
             force_ui_update: false,
             show_config_popup: false,
@@ -193,7 +193,7 @@ impl Installer {
                         }
 
                         self.state = InstallerState::Ready;
-                        self.log(MessageType::success(t!("status.ready")))
+                        self.log(MessageType::success(t!("status.ready")));
                     }
 
                     patch::TaskContext::GetExistingConfig(_) => {
@@ -234,11 +234,8 @@ impl Installer {
                         }
                     }
 
-                    patch::TaskContext::PatchGameFiles(_) => {
-                        self.launch_game();
-                    }
-
-                    patch::TaskContext::UnpatchGameFiles(_) => {
+                    patch::TaskContext::PatchGameFiles(_)
+                    | patch::TaskContext::UnpatchGameFiles(_) => {
                         self.launch_game();
                     }
 
@@ -250,9 +247,9 @@ impl Installer {
                 StatusType::Error(ctx) => match ctx {
                     patch::TaskContext::GetManifest(ctx) => {
                         if ctx.out_outdated {
-                            self.state = InstallerState::Outdated
+                            self.state = InstallerState::Outdated;
                         } else {
-                            self.state = InstallerState::Error
+                            self.state = InstallerState::Error;
                         }
                     }
 
@@ -268,8 +265,8 @@ impl Installer {
                         }
                     }
 
-                    patch::TaskContext::GetExistingConfig(_) => {}
-                    patch::TaskContext::CopyExistingConfig(_) => {}
+                    patch::TaskContext::GetExistingConfig(_)
+                    | patch::TaskContext::CopyExistingConfig(_) => {}
 
                     _ => self.state = InstallerState::Error,
                 },
@@ -422,11 +419,11 @@ impl Installer {
         self.install_mod(entry);
     }
 
-    pub fn get_existing_config(&mut self) {
+    pub fn get_existing_config(&self) {
         patch::get_existing_config(self.dirs.clone(), self.tx.clone());
     }
 
-    pub fn copy_existing_config(&mut self) {
+    pub fn copy_existing_config(&self) {
         patch::copy_existing_config(self.dirs.clone(), self.tx.clone());
     }
 

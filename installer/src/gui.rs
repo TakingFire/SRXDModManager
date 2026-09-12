@@ -75,7 +75,7 @@ impl eframe::App for Gui {
             }
             self.build_list();
             self.initialized = true;
-        };
+        }
 
         self.installer.update();
 
@@ -125,7 +125,7 @@ impl eframe::App for Gui {
 }
 
 impl Gui {
-    fn draw_outdated_warning(&mut self, ui: &mut Ui) {
+    fn draw_outdated_warning(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
@@ -142,7 +142,7 @@ impl Gui {
         });
     }
 
-    fn draw_disclaimer(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+    fn draw_disclaimer(&mut self, ui: &Ui, frame: &mut eframe::Frame) {
         Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(220.0);
             ui.vertical_centered(|ui| {
@@ -196,7 +196,7 @@ impl Gui {
         });
     }
 
-    fn draw_config_popup(&mut self, ui: &mut Ui, frame: &mut eframe::Frame) {
+    fn draw_config_popup(&mut self, ui: &Ui, frame: &mut eframe::Frame) {
         Modal::new(Id::new("ui_config")).show(ui, |ui| {
             ui.set_width(220.0);
             ui.vertical_centered(|ui| {
@@ -320,13 +320,13 @@ impl Gui {
                                     .clicked()
                                 {
                                     self.installer.patch_game_files();
-                                };
+                                }
                                 if ui
                                     .button(RichText::new(t!("button.run_vanilla")).size(16.0))
                                     .clicked()
                                 {
                                     self.installer.unpatch_game_files();
-                                };
+                                }
                             },
                         );
 
@@ -532,14 +532,14 @@ impl Gui {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
                             ui.hyperlink_to(
-                                RichText::new(entry.entry.name.to_owned()).size(16.0),
-                                entry.entry.url.to_owned(),
+                                RichText::new(entry.entry.name.clone()).size(16.0),
+                                entry.entry.url.clone(),
                             )
-                            .on_hover_text(entry.entry.url.to_owned());
+                            .on_hover_text(entry.entry.url.clone());
                             ui.label(
                                 RichText::new(t!(
                                     "modentry.author",
-                                    name = entry.entry.author.to_owned()
+                                    name = entry.entry.author.clone()
                                 ))
                                 .weak(),
                             );
@@ -547,7 +547,7 @@ impl Gui {
 
                         if entry.recognized {
                             ui.add_space(2.0);
-                            ui.label(RichText::new(entry.entry.description.to_owned()));
+                            ui.label(RichText::new(entry.entry.description.clone()));
                         }
 
                         if self.show_debug {
@@ -597,7 +597,7 @@ impl Gui {
                             return;
                         }
 
-                        ComboBox::from_id_salt(entry.entry.name.to_owned())
+                        ComboBox::from_id_salt(entry.entry.name.clone())
                                 .selected_text(match entry.state {
                                     ModEntryState::PendingVersionChangeFrom(current_version) => {
                                         format!(
@@ -618,7 +618,7 @@ impl Gui {
                                     for i in 0..entry.entry.versions.len() {
                                         let option = ui.selectable_label(
                                             i == entry.selected_version,
-                                            entry.entry.versions[i].name.to_owned(),
+                                            entry.entry.versions[i].name.clone(),
                                         );
 
                                         if option.clicked() {
@@ -651,7 +651,7 @@ impl Gui {
             });
     }
 
-    fn draw_mod_debug(&self, ui: &mut Ui, entry: &mut ModEntry) {
+    fn draw_mod_debug(&self, ui: &mut Ui, entry: &ModEntry) {
         ui.label(
             RichText::new(format!("Categories: {}", entry.entry.categories.join(", "))).weak(),
         );
