@@ -1,5 +1,9 @@
 # SRXD Mod Manager
 
+[![Latest Release](https://img.shields.io/github/v/release/TakingFire/SRXDModManager)](https://github.com/TakingFire/SRXDModManager/releases/latest)
+![GitHub Downloads](https://img.shields.io/github/downloads/TakingFire/SRXDModManager/total)
+[![Crowdin](https://badges.crowdin.net/srxd-mod-manager/localized.svg)](https://crowdin.com/project/srxd-mod-manager)
+
 **A simple plugin manager for Spin Rhythm XD**. \
 Includes automatic patching, mod updates, and dependency management.
 
