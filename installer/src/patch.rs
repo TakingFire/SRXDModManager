@@ -7,7 +7,7 @@ use eframe::egui::{Color32, RichText};
 use flume::Sender;
 use model::Manifest;
 use serde_json::Value;
-use tokio::fs;
+use tokio::{fs, time::error::Elapsed};
 
 use crate::app::{DirectoryList, ModEntry, ModEntryState};
 
@@ -520,7 +520,17 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.launch_game")))?;
 
-            tokio::time::sleep(Duration::from_secs(4)).await;
+            let result = wait_for_process("SpinRhythm.exe", 8).await;
+
+            if result.is_ok() {
+                let _ = tx.send(StatusType::Message(MessageType::success(t!(
+                    "status.ready"
+                ))));
+            } else {
+                let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+                    "warning.timed_out"
+                ))));
+            }
 
             Ok(())
         }()
@@ -704,4 +714,29 @@ async fn copy_dir_all(
         }
     }
     Ok(())
+}
+
+async fn wait_for_process(name: &str, timeout: u64) -> Result<(), Elapsed> {
+    let mut sys = sysinfo::System::new();
+
+    tokio::time::timeout(Duration::from_secs(timeout), async {
+        loop {
+            sys.refresh_processes_specifics(
+                sysinfo::ProcessesToUpdate::All,
+                true,
+                sysinfo::ProcessRefreshKind::nothing().with_exe(sysinfo::UpdateKind::OnlyIfNotSet),
+            );
+
+            if sys
+                .processes()
+                .values()
+                .any(|p| p.exe().and_then(|path| path.file_name()) == Some(name.as_ref()))
+            {
+                break;
+            }
+
+            tokio::time::sleep(Duration::from_millis(500)).await;
+        }
+    })
+    .await
 }

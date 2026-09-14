@@ -280,6 +280,11 @@ impl Installer {
                         }
                     }
 
+                    patch::TaskContext::PatchGameFiles(_)
+                    | patch::TaskContext::UnpatchGameFiles(_) => {
+                        self.launch_game();
+                    }
+
                     patch::TaskContext::GetExistingConfig(_)
                     | patch::TaskContext::CopyExistingConfig(_) => {}
 

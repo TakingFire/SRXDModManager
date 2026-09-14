@@ -33,6 +33,10 @@ removing = "Removing"
 update = "Update"
 open_folder = "Open Folder"
 
+[popup.launching]
+title = "Launching Game"
+text = "Waiting for game to start"
+
 [popup.outdated]
 title = "Update Required"
 text = "This version may no longer be compatible. Please get the latest version here:"
@@ -114,6 +118,7 @@ launch_game = "Launching Game"
 mod_unrecognized = "%{count} Mod(s) Unrecognized"
 mod_required = "This mod is required by %{count} mod(s)"
 unityplayer = "UnityPlayer Renamed or Missing"
+timed_out = "Timed Out"
 
 [error]
 app_dir = "Unknown App Directory"

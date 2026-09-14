@@ -68,16 +68,30 @@ impl eframe::App for Gui {
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
         let config = &mut self.installer.config;
 
-        if matches!(self.installer.state, InstallerState::Outdated) {
-            self.draw_outdated_warning(ui);
-        } else if cfg!(not(target_os = "windows"))
-            && matches!(config.popup_linux_guide, PopupState::Active)
-        {
-            self.draw_linux_guide(ui);
-        } else if matches!(config.popup_disclaimer, PopupState::Active) {
-            self.draw_disclaimer(ui);
-        } else if matches!(config.popup_existing_config, PopupState::Active) {
-            self.draw_config_popup(ui);
+        match () {
+            () if matches!(self.installer.state, InstallerState::Launching) => {
+                self.draw_launching_popup(ui);
+            }
+
+            () if matches!(self.installer.state, InstallerState::Outdated) => {
+                self.draw_outdated_warning(ui);
+            }
+
+            () if cfg!(not(target_os = "windows"))
+                && matches!(config.popup_linux_guide, PopupState::Active) =>
+            {
+                self.draw_linux_guide(ui);
+            }
+
+            () if matches!(config.popup_disclaimer, PopupState::Active) => {
+                self.draw_disclaimer(ui);
+            }
+
+            () if matches!(config.popup_existing_config, PopupState::Active) => {
+                self.draw_config_popup(ui);
+            }
+
+            () => {}
         }
 
         if self.show_settings {
@@ -213,6 +227,19 @@ impl Gui {
                         }
                     });
                 });
+            });
+        });
+    }
+
+    fn draw_launching_popup(&self, ui: &Ui) {
+        Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
+            ui.set_width(240.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(t!("popup.launching.title")).size(18.0));
+                ui.add_space(8.0);
+                ui.add(egui::Spinner::new().color(ui.visuals().text_color()));
+                ui.add_space(8.0);
+                ui.label(t!("popup.launching.text"));
             });
         });
     }
