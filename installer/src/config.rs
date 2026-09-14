@@ -31,18 +31,18 @@ pub enum PopupState {
 }
 
 impl PopupState {
-    pub fn enable(&mut self) {
-        if matches!(self, PopupState::Dismissed) {
-            *self = PopupState::Active;
+    pub const fn enable(&mut self) {
+        if matches!(self, Self::Dismissed) {
+            *self = Self::Active;
         }
     }
 
-    pub fn dismiss(&mut self) {
-        *self = PopupState::Dismissed;
+    pub const fn dismiss(&mut self) {
+        *self = Self::Dismissed;
     }
 
-    pub fn disable(&mut self) {
-        *self = PopupState::Disabled;
+    pub const fn disable(&mut self) {
+        *self = Self::Disabled;
     }
 }
 
@@ -59,6 +59,13 @@ pub struct InstallerConfig {
     pub filter_by: FilterBy,
     pub sort_by: SortBy,
     pub search: String,
+
+    pub show_unrecognized_mods: bool,
+    pub show_outdated_mods: bool,
+    pub show_outdated_app: bool,
+
+    pub show_game_console: bool,
+    pub show_app_console: bool,
 }
 
 impl Default for InstallerConfig {
@@ -74,6 +81,13 @@ impl Default for InstallerConfig {
             filter_by: FilterBy::default(),
             sort_by: SortBy::default(),
             search: String::default(),
+
+            show_unrecognized_mods: true,
+            show_outdated_mods: true,
+            show_outdated_app: true,
+
+            show_game_console: true,
+            show_app_console: false,
         }
     }
 }

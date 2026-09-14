@@ -22,6 +22,8 @@ pub struct Gui {
     linux_guide_checkbox: bool,
     existing_config_checkbox: bool,
 
+    show_settings: bool,
+
     initialized: bool,
     show_debug: bool,
 }
@@ -40,6 +42,11 @@ impl eframe::App for Gui {
             if let Some(storage) = frame.storage_mut() {
                 self.load(storage);
             }
+
+            if self.installer.config.show_app_console {
+                enable_console(true);
+            }
+
             ctx.set_fonts(load_font());
             self.build_list();
 
@@ -73,17 +80,21 @@ impl eframe::App for Gui {
             self.draw_config_popup(ui);
         }
 
+        if self.show_settings {
+            self.draw_settings_menu(ui);
+        }
+
         if matches!(self.installer.state, InstallerState::Error) {
             self.draw_error_bar(ui);
         }
 
         self.draw_sidebar(ui);
 
-        if !self.updatable_mods.is_empty() {
+        if self.installer.config.show_outdated_mods && !self.updatable_mods.is_empty() {
             self.draw_update_bar(ui);
         }
 
-        if !self.unrecognized_mods.is_empty() {
+        if self.installer.config.show_unrecognized_mods && !self.unrecognized_mods.is_empty() {
             self.draw_unrecognized_bar(ui);
         }
 
@@ -94,7 +105,7 @@ impl eframe::App for Gui {
 }
 
 impl Gui {
-    fn load(&mut self, storage: &mut dyn eframe::Storage) {
+    fn load(&mut self, storage: &dyn eframe::Storage) {
         if let Some(config) = eframe::get_value(storage, "config") {
             self.installer.config = config;
         }
@@ -109,10 +120,12 @@ impl Gui {
                 ui.hyperlink_to(t!("popup.outdated.link"), UPDATE_URL);
 
                 ui.add_space(8.0);
-                if ui.button(t!("popup.outdated.button")).clicked() {
-                    self.installer.state = InstallerState::Init;
-                    self.installer.get_patcher();
-                }
+                ui.vertical_centered_justified(|ui| {
+                    if ui.button(t!("popup.outdated.button")).clicked() {
+                        self.installer.state = InstallerState::Init;
+                        self.installer.get_patcher();
+                    }
+                });
             });
         });
     }
@@ -170,7 +183,7 @@ impl Gui {
 
     fn draw_config_popup(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_config")).show(ui, |ui| {
-            ui.set_width(220.0);
+            ui.set_width(230.0);
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("popup.existing_config.title")).size(18.0));
                 ui.label(t!("popup.existing_config.text1"));
@@ -266,7 +279,7 @@ impl Gui {
                     {
                         for entry in &self.unrecognized_mods {
                             self.installer
-                                .uninstall_mod(&mut entry.clone().borrow_mut());
+                                .uninstall_mod(&mut entry.clone().borrow_mut(), true);
                         }
                     }
                 });
@@ -354,22 +367,9 @@ impl Gui {
                             });
 
                         ui.add_space(2.0);
-                        ui.add_enabled_ui(
-                            matches!(self.installer.state, InstallerState::Ready),
-                            |ui| {
-                                if ui.button(t!("button.open_folder")).clicked() {
-                                    let _ = open::that(
-                                        self.installer
-                                            .dirs
-                                            .app_dir
-                                            .as_ref()
-                                            .unwrap()
-                                            .join("BepInEx")
-                                            .join("plugins"),
-                                    );
-                                }
-                            },
-                        );
+                        if ui.button(t!("button.open_settings")).clicked() {
+                            self.show_settings = true;
+                        }
                     });
                 });
             });
@@ -565,7 +565,7 @@ impl Gui {
                                     self.installer.force_ui_update = true;
                                 }
                                 ModEntryState::Installed => {
-                                    self.installer.uninstall_mod(entry);
+                                    self.installer.uninstall_mod(entry, false);
                                     self.installer.force_ui_update = true;
                                 }
                                 ModEntryState::PendingVersionChangeFrom(_) => {
@@ -649,6 +649,95 @@ impl Gui {
         ui.label(RichText::new(entry.entry.versions[entry.selected_version].digest.clone()).weak());
     }
 
+    fn draw_settings_menu(&mut self, ui: &Ui) {
+        Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
+            ui.set_max_width(300.0);
+            // ui.set_width(300.0_f32.min(ui.content_rect().width() - 32.0));
+
+            ui.vertical_centered_justified(|ui| {
+                ui.label(RichText::new(t!("settings.title")).size(18.0));
+                ui.add_space(8.0);
+
+                ui.columns(2, |cols| {
+                    cols[0].vertical_centered_justified(|ui| {
+                        let dirs = &self.installer.dirs;
+
+                        ui.add_enabled_ui(
+                            matches!(self.installer.state, InstallerState::Ready),
+                            |ui| {
+                                if ui.button(t!("settings.btn_plugins_folder")).clicked() {
+                                    let _ = open::that(
+                                        dirs.app_dir.as_ref().unwrap().join("BepInEx/plugins"),
+                                    );
+                                }
+                                if ui.button(t!("settings.btn_game_folder")).clicked() {
+                                    let _ = open::that(dirs.game_dir.as_ref().unwrap());
+                                }
+                                if ui.button(t!("settings.btn_steam_folder")).clicked() {
+                                    let _ = open::that(dirs.steam_dir.as_ref().unwrap());
+                                }
+                            },
+                        );
+
+                        ui.add_space(8.0);
+
+                        ui.style_mut().visuals.widgets.inactive.weak_bg_fill =
+                            Color32::TRANSPARENT.blend(Color32::RED.gamma_multiply(0.125));
+                        ui.style_mut().visuals.widgets.hovered.weak_bg_fill =
+                            Color32::TRANSPARENT.blend(Color32::RED.gamma_multiply(0.25));
+
+                        if ui.button(t!("settings.btn_remove_mods")).clicked() {
+                            self.installer.uninstall_all_mods();
+                        }
+                        if ui.button(t!("settings.btn_reset_app")).clicked() {
+                            self.reset_app(ui);
+                        }
+                    });
+
+                    cols[1].vertical(|ui| {
+                        let config = &mut self.installer.config;
+
+                        ui.checkbox(
+                            &mut config.show_game_console,
+                            t!("settings.show_game_console"),
+                        );
+                        ui.add_enabled_ui(cfg!(target_os = "windows"), |ui| {
+                            if ui
+                                .checkbox(
+                                    &mut config.show_app_console,
+                                    t!("settings.show_app_console"),
+                                )
+                                .changed()
+                            {
+                                enable_console(config.show_app_console);
+                            }
+                        });
+
+                        ui.add_space(8.0);
+
+                        ui.checkbox(
+                            &mut config.show_unrecognized_mods,
+                            t!("settings.show_unrecognized_mods"),
+                        );
+                        ui.checkbox(
+                            &mut config.show_outdated_mods,
+                            t!("settings.show_outdated_mods"),
+                        );
+                        ui.checkbox(
+                            &mut config.show_outdated_app,
+                            t!("settings.show_outdated_app"),
+                        );
+                    });
+                });
+
+                ui.add_space(8.0);
+                if ui.button(t!("settings.btn_close")).clicked() {
+                    self.show_settings = false;
+                }
+            });
+        });
+    }
+
     fn build_list(&mut self) {
         let config = &mut self.installer.config;
 
@@ -724,6 +813,30 @@ impl Gui {
                 SortBy::Author => a.entry.author.cmp(&b.entry.author),
             }
         });
+    }
+
+    fn reset_app(&mut self, ui: &Ui) {
+        ui.memory_mut(|memory| {
+            *memory = egui::Memory::default();
+        });
+
+        let mut installer = Installer::default();
+        installer.init();
+
+        *self = Self::default();
+        self.installer = installer;
+        self.initialized = true;
+    }
+}
+
+fn enable_console(enabled: bool) {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        if enabled {
+            windows_sys::Win32::System::Console::AllocConsole();
+        } else {
+            windows_sys::Win32::System::Console::FreeConsole();
+        }
     }
 }
 

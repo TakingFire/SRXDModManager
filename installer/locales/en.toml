@@ -1,7 +1,7 @@
 [button]
 run_modded = "Run (Modded)"
 run_vanilla = "Run (Vanilla)"
-open_folder = "Open Plugins Folder"
+open_settings = "Open Settings"
 disable_popup = "Don't show again"
 
 [label]
@@ -72,6 +72,20 @@ btn_update = "Update All"
 text = "Found %{count} unknown mod(s)"
 btn_show = "Show"
 btn_remove = "Remove All"
+
+[settings]
+title = "Settings"
+btn_plugins_folder = "Open Plugins Folder"
+btn_game_folder = "Open Game Folder"
+btn_steam_folder = "Open Steam Folder"
+btn_remove_mods = "Remove All Mods"
+btn_reset_app = "Reset App Data"
+show_game_console = "Show Game Console"
+show_app_console = "Show App Console"
+show_unrecognized_mods = "Show Unknown Mods"
+show_outdated_mods = "Show Mod Updates"
+show_outdated_app = "Show App Updates"
+btn_close = "Close"
 
 [status]
 ready = "Ready"

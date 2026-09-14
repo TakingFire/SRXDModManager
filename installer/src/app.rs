@@ -4,7 +4,7 @@ use flume::{Receiver, Sender};
 use model::{Mod, Version};
 
 use crate::{
-    config::{self, InstallerConfig},
+    config::InstallerConfig,
     patch::{self, MessageType, StatusType},
 };
 
@@ -126,6 +126,11 @@ impl Installer {
                         self.config.manifest = ctx.out_manifest;
                         self.build_mod_list();
                         self.build_id_digest_maps();
+
+                        self.log(MessageType::success(t!(
+                            "status.mods_loaded",
+                            count = self.mods.len()
+                        )));
 
                         if ctx.out_outdated {
                             self.state = InstallerState::Outdated;
@@ -252,6 +257,11 @@ impl Installer {
                         if ctx.out_outdated {
                             self.state = InstallerState::Outdated;
                         } else if !self.config.manifest.mods.is_empty() {
+                            self.log(MessageType::success(t!(
+                                "status.mods_loaded",
+                                count = self.mods.len()
+                            )));
+
                             self.get_patcher();
                         } else {
                             self.state = InstallerState::Error;
@@ -330,11 +340,6 @@ impl Installer {
                 ..Default::default()
             })));
         }
-
-        self.log(MessageType::success(t!(
-            "status.mods_loaded",
-            count = self.mods.len()
-        )));
     }
 
     pub fn get_directories(&self) {
@@ -389,8 +394,8 @@ impl Installer {
         }
     }
 
-    pub fn uninstall_mod(&mut self, entry: &mut ModEntry) {
-        if entry.active_dependents > 0 {
+    pub fn uninstall_mod(&mut self, entry: &mut ModEntry, force: bool) {
+        if !force && entry.active_dependents > 0 {
             self.log(MessageType::warning(t!(
                 "warning.mod_required",
                 count = entry.active_dependents
@@ -429,8 +434,14 @@ impl Installer {
         }
     }
 
+    pub fn uninstall_all_mods(&mut self) {
+        for i in 0..self.mods.len() {
+            self.uninstall_mod(&mut self.mods[i].clone().borrow_mut(), true);
+        }
+    }
+
     pub fn update_mod(&mut self, entry: &mut ModEntry) {
-        self.uninstall_mod(entry);
+        self.uninstall_mod(entry, true);
         self.install_mod(entry);
     }
 
@@ -445,7 +456,13 @@ impl Installer {
     pub fn patch_game_files(&mut self) {
         self.state = InstallerState::Launching;
 
-        patch::patch_game_files(self.dirs.clone(), self.tx.clone());
+        patch::patch_game_files(
+            patch::PatchGameFilesContext {
+                directories: self.dirs.clone(),
+                show_console: self.config.show_game_console,
+            },
+            self.tx.clone(),
+        );
     }
 
     pub fn unpatch_game_files(&mut self) {

@@ -29,7 +29,7 @@ pub enum TaskContext {
     InstallMod(InstallModContext),
     UninstallMod(InstallModContext),
 
-    PatchGameFiles(DirectoryList),
+    PatchGameFiles(PatchGameFilesContext),
     UnpatchGameFiles(DirectoryList),
     LaunchGame(DirectoryList),
 }
@@ -48,6 +48,11 @@ pub struct GetInstalledModsContext {
 pub struct InstallModContext {
     pub directories: DirectoryList,
     pub entry: ModEntry,
+}
+
+pub struct PatchGameFilesContext {
+    pub directories: DirectoryList,
+    pub show_console: bool,
 }
 
 #[allow(unused)]
@@ -445,14 +450,16 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
     });
 }
 
-pub fn patch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
+pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
                 "status.config_set"
             ))));
 
-            write_doorstop_config(&ctx)?;
+            write_doorstop_config(&ctx.directories)?;
+
+            write_bepinex_config(&ctx.directories, ctx.show_console).await?;
 
             #[cfg(target_os = "linux")]
             write_proton_override(&ctx, &tx).await?;
@@ -461,9 +468,9 @@ pub fn patch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
                 "status.files_copy"
             ))));
 
-            rename_unity_player(&ctx, &tx).await?;
+            rename_unity_player(&ctx.directories, &tx).await?;
 
-            copy_patch_files(&ctx).await?;
+            copy_patch_files(&ctx.directories).await?;
 
             Ok(())
         }()
@@ -489,7 +496,7 @@ pub fn unpatch_game_files(ctx: DirectoryList, tx: Sender<StatusType>) {
         }()
         .await;
 
-        send_task_result(result, TaskContext::PatchGameFiles(ctx), &tx);
+        send_task_result(result, TaskContext::UnpatchGameFiles(ctx), &tx);
     });
 }
 
@@ -525,11 +532,12 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
 
 fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
     let app_dir = ctx.app_dir.as_ref().unwrap();
+    let config_dir = app_dir.join("doorstop_config.ini");
 
     let mut doorstop = Ini::new();
 
     doorstop
-        .load(app_dir.join("doorstop_config.ini"))
+        .load(&config_dir)
         .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.config_read")))?;
 
@@ -545,7 +553,36 @@ fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
     );
 
     doorstop
-        .write(app_dir.join("doorstop_config.ini"))
+        .write(&config_dir)
+        .inspect_err(|e| eprintln!("{e}"))
+        .map_err(|_| MessageType::error(t!("error.config_write")))?;
+
+    Ok(())
+}
+
+async fn write_bepinex_config(ctx: &DirectoryList, show_console: bool) -> Result<(), MessageType> {
+    let app_dir = ctx.app_dir.as_ref().unwrap();
+    let config_dir = app_dir.join("BepInEx/config/BepInEx.cfg");
+
+    if !fs::try_exists(&config_dir).await.unwrap_or(false) {
+        return Ok(());
+    }
+
+    let mut bepinex = Ini::new();
+
+    let mut defaults = bepinex.defaults();
+    defaults.case_sensitive = true;
+    bepinex.load_defaults(defaults);
+
+    bepinex
+        .load(&config_dir)
+        .inspect_err(|e| eprintln!("{e}"))
+        .map_err(|_| MessageType::error(t!("error.config_read")))?;
+
+    bepinex.set("Logging.Console", "Enabled", Some(show_console.to_string()));
+
+    bepinex
+        .write(&config_dir)
         .inspect_err(|e| eprintln!("{e}"))
         .map_err(|_| MessageType::error(t!("error.config_write")))?;
 
