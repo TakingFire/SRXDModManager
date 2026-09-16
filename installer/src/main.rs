@@ -15,6 +15,8 @@ use crate::app::Installer;
 use crate::gui::Gui;
 
 fn main() -> eframe::Result {
+    initialize_console();
+
     let rt = tokio::runtime::Runtime::new().unwrap();
     let _guard = rt.enter();
 
@@ -42,4 +44,34 @@ fn main() -> eframe::Result {
     };
 
     eframe::run_native("SRXD Mod Manager", options, Box::new(|_| Ok(app)))
+}
+
+pub fn initialize_console() {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use windows_sys::Win32::{
+            System::Console::{AllocConsole, GetConsoleWindow},
+            UI::WindowsAndMessaging::{SW_HIDE, ShowWindow},
+        };
+
+        if AllocConsole() != 0 {
+            ShowWindow(GetConsoleWindow(), SW_HIDE);
+        }
+    }
+}
+
+pub fn show_console(enabled: bool) {
+    #[cfg(target_os = "windows")]
+    unsafe {
+        use windows_sys::Win32::{
+            System::Console::GetConsoleWindow,
+            UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW, ShowWindow},
+        };
+
+        if enabled {
+            ShowWindow(GetConsoleWindow(), SW_SHOW);
+        } else {
+            ShowWindow(GetConsoleWindow(), SW_HIDE);
+        }
+    }
 }

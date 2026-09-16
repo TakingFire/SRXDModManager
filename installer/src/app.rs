@@ -316,6 +316,7 @@ impl Installer {
     }
 
     pub fn log(&mut self, msg: MessageType) {
+        println!("{:?}", msg);
         self.log.push(msg);
         self.force_ui_update = true;
     }

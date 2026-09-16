@@ -44,7 +44,7 @@ impl eframe::App for Gui {
             }
 
             if self.installer.config.show_app_console {
-                enable_console(true);
+                crate::show_console(true);
             }
 
             ctx.set_fonts(load_font());
@@ -382,7 +382,7 @@ impl Gui {
                             .fill(ui.visuals().window_fill + Color32::from_gray(6))
                             .show(ui, |ui| {
                                 ui.set_max_height(ui.available_height() - 26.0);
-                                ui.take_available_height();
+                                ui.take_available_space();
                                 ui.vertical_centered(|ui| {
                                     // ui.set_height((ui.available_height() - 5.0).max(0.0));
                                     ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
@@ -736,7 +736,7 @@ impl Gui {
                                 )
                                 .changed()
                             {
-                                enable_console(config.show_app_console);
+                                crate::show_console(config.show_app_console);
                             }
                         });
 
@@ -853,17 +853,6 @@ impl Gui {
         *self = Self::default();
         self.installer = installer;
         self.initialized = true;
-    }
-}
-
-fn enable_console(enabled: bool) {
-    #[cfg(target_os = "windows")]
-    unsafe {
-        if enabled {
-            windows_sys::Win32::System::Console::AllocConsole();
-        } else {
-            windows_sys::Win32::System::Console::FreeConsole();
-        }
     }
 }
 

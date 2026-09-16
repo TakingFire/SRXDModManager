@@ -62,6 +62,7 @@ pub enum StatusType {
 }
 
 #[allow(unused)]
+#[derive(Debug)]
 pub enum MessageType {
     Default(String),
     Success(String),
@@ -135,7 +136,7 @@ pub fn get_directories(mut ctx: DirectoryList, tx: Sender<StatusType>) {
             ctx.game_dir = Some(game_lib.resolve_app_dir(&game));
 
             eprintln!(
-                "App: {}\nSteam: {}\nGame: {}",
+                "App: {}\nSteam: {}\nGame: {}\n",
                 ctx.app_dir.as_ref().unwrap().to_string_lossy(),
                 ctx.steam_dir.as_ref().unwrap().to_string_lossy(),
                 ctx.game_dir.as_ref().unwrap().to_string_lossy()
