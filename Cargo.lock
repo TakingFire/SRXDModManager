@@ -1764,13 +1764,13 @@ dependencies = [
  "eframe",
  "flume",
  "model",
- "natord",
  "open",
  "openssl",
  "parking_lot",
  "regashii",
  "reqwest",
  "rust-i18n",
+ "semver",
  "serde",
  "serde_json",
  "steamlocate",
@@ -3481,7 +3481,7 @@ dependencies = [
 
 [[package]]
 name = "server"
-version = "0.2.3"
+version = "0.2.4"
 dependencies = [
  "anyhow",
  "axum",

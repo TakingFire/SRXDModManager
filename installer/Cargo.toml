@@ -24,7 +24,6 @@ eframe = { version = "0.36.1", default-features = false, features = [
 ] }
 flume = "0.12.0"
 model = { path = "../model" }
-natord = "1.0.9"
 open = "5.3.5"
 parking_lot = "0.12.5"
 reqwest = { version = "0.13.1", default-features = false, features = [
@@ -32,6 +31,7 @@ reqwest = { version = "0.13.1", default-features = false, features = [
   "native-tls"
 ] }
 rust-i18n = "4.1.0"
+semver = "1.0.28"
 serde = { version = "1.0.229", features = ["derive"] }
 serde_json = "1.0.150"
 steamlocate = "2.0.1"

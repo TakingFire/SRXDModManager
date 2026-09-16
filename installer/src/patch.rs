@@ -1,12 +1,11 @@
 #![allow(clippy::redundant_closure_call)]
 
-use std::{cmp::Ordering, time::Duration};
+use std::time::Duration;
 
 use configparser::ini::Ini;
 use eframe::egui::{Color32, RichText};
 use flume::Sender;
 use model::Manifest;
-use serde_json::Value;
 use tokio::{fs, time::error::Elapsed};
 
 use crate::app::{DirectoryList, ModEntry, ModEntryState};
@@ -218,21 +217,21 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|err| MessageType::error(err.to_string()))?;
 
-            let manifest: Value = serde_json::from_str(&res)
+            #[derive(serde::Deserialize)]
+            struct Header {
+                version: String,
+            }
+
+            let header: Header = serde_json::from_str(&res)
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
-            ctx.out_outdated = manifest
-                .get("version")
-                .and_then(|version| version.as_str())
-                .is_some_and(|version| {
-                    matches!(
-                        natord::compare_ignore_case(version, &model::get_version()),
-                        Ordering::Greater
-                    )
-                });
+            let own_version = semver::Version::parse(&model::get_version()).unwrap();
+            let api_version = semver::Version::parse(&header.version).unwrap();
 
-            ctx.out_manifest = serde_json::from_value(manifest)
+            ctx.out_outdated = api_version.major > own_version.major;
+
+            ctx.out_manifest = serde_json::from_str(&res)
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
