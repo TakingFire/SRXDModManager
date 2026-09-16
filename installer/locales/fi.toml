@@ -1,0 +1,144 @@
+[button]
+run_modded = "Käynnistä (Modattu)"
+run_vanilla = "Käynnistä (Vanilla)"
+open_settings = "Avaa Asetukset"
+disable_popup = "Älä näytä uudestaan"
+
+[label]
+categories = "Kategoriat"
+output = "Tuloste"
+sort = "Järjestä:"
+search = "Etsi"
+category_all = "Kaikki Modit"
+
+[config.filter]
+all = "Kaikki"
+installed = "Asennettu"
+uninstalled = "Ei asennettu"
+
+[config.sort]
+recent = "Viimeisin"
+title = "Nimi"
+author = "Omistaja"
+
+[modentry]
+author = "tekijä: %{name}"
+unknown = "Unknown"
+
+  [modentry.button]
+  install = "Install"
+  downloading = "Ladataan"
+  uninstall = "Uninstall"
+  removing = "Removing"
+  update = "Päivitä"
+  open_folder = "Open Folder"
+
+[popup.launching]
+title = "Käynnistetään Peliä"
+text = "Odotetaan pelin käynnistymistä"
+
+[popup.outdated]
+title = "Päivitys Vaadittu"
+text = "Tämä versio ei välttämättä ole yhteensopiva. Lataa uusin versio täältä:"
+link = "Lataussivu"
+button = "Käynnistä Silti"
+
+[popup.disclaimer]
+title = "Varoitus"
+text = "Modijulkaisuja ei tarkasteta säännöllisesti. Lataa omalla vastuullasi."
+button = "Ymmärrän"
+
+[popup.linux]
+title = "Linux Modaus"
+text1 = "Sinun täytyy käynnistää pelin Windows-koontiversio Protonin kautta. Aloita vaiheesta 0 täällä:"
+link = "SpinShare Modaus Opas"
+text2 = "ja käynnistä ohjelma uudelleen. (Jos käytät jo Protonia, tätä ei tarvitse huomioida)"
+button = "Sulje"
+
+[popup.existing_config]
+title = "Modiasetuksia Löydetty"
+text1 = "Sinulla on olemassa olevia asetustiedostoja."
+text2 = "Haluatko kopioida ne?"
+btn_cancel = "Peru"
+btn_copy = "Kopioi"
+
+[popup.error]
+text = "Jokin meni pieleen (lisätiedot tulosteessa)"
+btn_retry = "Yritä uudelleen"
+btn_report = "Ilmoita ongelmasta"
+
+[popup.mod_update]
+text = "Päivitys saatavilla %{count} modille!"
+btn_show = "Näytä"
+btn_update = "Päivitä Kaikki"
+
+[popup.mod_unrecognized]
+text = "Tuntemattomia modeja: %{count}"
+btn_show = "Näytä"
+btn_remove = "Poista Kaikki"
+
+[settings]
+title = "Asetukset"
+btn_plugins_folder = "Avaa Modikansio"
+btn_game_folder = "Avaa Pelikansio"
+btn_steam_folder = "Avaa Steam- kansio"
+btn_remove_mods = "Poista Kaikki Modit"
+btn_reset_app = "Nollaa Sovellustiedot"
+show_game_console = "Näytä Pelikonsoli"
+show_app_console = "Näytä Sovelluskonsoli"
+show_unrecognized_mods = "Näytä Tuntemattomat Modit"
+show_outdated_mods = "Näytä Modipäivitykset"
+show_outdated_app = "Näytä Sovelluspäivitykset"
+btn_close = "Sulje"
+
+[status]
+ready = "Valmis"
+starting = "Käynnistyy"
+dirs_scan = "Paikannetaan Hakemistoja"
+patcher_found = "Löydettiin Paikkaaja"
+patcher_dl = "Downloading Patcher"
+zip_extract = "Extracting Archive"
+mods_fetch = "Haetaan Modilistaa"
+mods_scan = "Skannataan Hakemistoa"
+mods_loaded = "Ladattiin %{count} Modia"
+mods_count = "Modeja asennettu: %{count}"
+mod_download = "Ladataan %{name}"
+mod_install = "%{name} Asennettu"
+mod_uninstall = "Removed %{name}"
+mod_remove = "Removing %{name}"
+config_found = "Löydettiin Modiasetuksia"
+config_copied = "Copied Mod Configs"
+config_set = "Setting Config"
+override_set = "Setting Override"
+files_copy = "Copying Files"
+files_remove = "Removing Patch Files"
+launch_game = "Käynnistetään Peliä"
+
+[warning]
+mod_unrecognized = "%{count} Mod(s) Unrecognized"
+mod_required = "This mod is required by %{count} mod(s)"
+unityplayer = "UnityPlayer Renamed or Missing"
+timed_out = "Timed Out"
+
+[error]
+app_dir = "Unknown App Directory"
+steam_dir = "Unknown Steam Directory"
+game_dir = "Unknown Game Directory"
+web_request = "Server Request Failed"
+download = "Download Failed"
+zip_read = "Failed to Read Archive"
+zip_extract = "Failed to Extract Archive"
+path_locate = "Failed to Find Path"
+path_create = "Failed to Create Folder"
+path_open = "Failed to Open Folder"
+file_locate = "Failed to Find File"
+file_copy = "Failed to Copy File"
+file_read = "Failed to Read Data"
+file_write = "Failed to Write Data"
+file_rename = "Failed to Rename File"
+file_delete = "Failed to Remove File"
+file_format = "Unknown File Format"
+config_locate = "Failed to Find Config"
+config_read = "Filed to Read Config"
+config_write = "Failed to Write Config"
+launch_game = "Failed to Launch Game"
