@@ -462,7 +462,7 @@ pub fn patch_game_files(ctx: PatchGameFilesContext, tx: Sender<StatusType>) {
             write_bepinex_config(&ctx.directories, ctx.show_console).await?;
 
             #[cfg(target_os = "linux")]
-            write_proton_override(&ctx, &tx).await?;
+            write_proton_override(&ctx.directories, &tx).await?;
 
             let _ = tx.send(StatusType::Message(MessageType::default(t!(
                 "status.files_copy"
@@ -627,8 +627,8 @@ async fn write_proton_override(
         .with(
             r"Software\Wine\DllOverrides",
             regashii::Key::new()
-                .with("winhttp", regashii::Value::Sz("native,builtin"))
-                .with("*winhttp", regashii::Value::Sz("native,builtin")),
+                .with("winhttp", regashii::Value::Sz("native,builtin".to_owned()))
+                .with("*winhttp", regashii::Value::Sz("native,builtin".to_owned())),
         );
 
     reg.serialize_file(&reg_dir)

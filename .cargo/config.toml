@@ -1,5 +1,13 @@
 [alias]
-build-installer = "build --profile installer --bin SRXDManager"
-run-installer = "run --profile installer --bin SRXDManager"
-build-server = "build --profile server --bin server"
-run-server = "run --profile server --bin server"
+# build installer
+bi = "build -p installer --profile installer"
+# run installer
+ri = "run -p installer --profile installer"
+# debug installer
+di = "run -p installer"
+# build server
+bs = "build -p server --profile server"
+# run server
+rs = "run -p server --profile server"
+# debug server
+ds = "run -p server"
