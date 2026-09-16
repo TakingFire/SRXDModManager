@@ -82,6 +82,11 @@ async fn build_manifest() -> anyhow::Result<()> {
         Err(_) => Manifest::default(),
     };
 
+    manifest = Manifest {
+        mods: manifest.mods,
+        ..Manifest::default()
+    };
+
     println!("Loading plugins");
 
     let mut entry_map: Vec<(ModTemplate, Mod)> = template
