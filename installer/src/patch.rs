@@ -520,7 +520,7 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.launch_game")))?;
 
-            let result = wait_for_process("SpinRhythm.exe", 8).await;
+            let result = wait_for_process("SpinRhythm.exe", Duration::from_secs(15)).await;
 
             if result.is_ok() {
                 let _ = tx.send(StatusType::Message(MessageType::success(t!(
@@ -574,20 +574,23 @@ async fn write_bepinex_config(ctx: &DirectoryList, show_console: bool) -> Result
     let app_dir = ctx.app_dir.as_ref().unwrap();
     let config_dir = app_dir.join("BepInEx/config/BepInEx.cfg");
 
-    if !fs::try_exists(&config_dir).await.unwrap_or(false) {
-        return Ok(());
-    }
-
     let mut bepinex = Ini::new();
 
     let mut defaults = bepinex.defaults();
     defaults.case_sensitive = true;
     bepinex.load_defaults(defaults);
 
-    bepinex
-        .load(&config_dir)
-        .inspect_err(|e| eprintln!("{e}"))
-        .map_err(|_| MessageType::error(t!("error.config_read")))?;
+    if fs::try_exists(&config_dir).await.unwrap_or(false) {
+        bepinex
+            .load(&config_dir)
+            .inspect_err(|e| eprintln!("{e}"))
+            .map_err(|_| MessageType::error(t!("error.config_read")))?;
+    } else {
+        fs::create_dir_all(&config_dir.parent().unwrap())
+            .await
+            .inspect_err(|e| eprintln!("{e}"))
+            .map_err(|_| MessageType::error(t!("error.path_create")))?;
+    }
 
     bepinex.set("Logging.Console", "Enabled", Some(show_console.to_string()));
 
@@ -716,10 +719,10 @@ async fn copy_dir_all(
     Ok(())
 }
 
-async fn wait_for_process(name: &str, timeout: u64) -> Result<(), Elapsed> {
+async fn wait_for_process(name: &str, timeout: Duration) -> Result<(), Elapsed> {
     let mut sys = sysinfo::System::new();
 
-    tokio::time::timeout(Duration::from_secs(timeout), async {
+    tokio::time::timeout(timeout, async {
         loop {
             sys.refresh_processes_specifics(
                 sysinfo::ProcessesToUpdate::All,

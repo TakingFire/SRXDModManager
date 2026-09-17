@@ -62,6 +62,7 @@ pub enum InstallerState {
     #[default]
     Init,
     Ready,
+    Patching,
     Launching,
     Outdated,
     Error,
@@ -460,7 +461,7 @@ impl Installer {
     }
 
     pub fn patch_game_files(&mut self) {
-        self.state = InstallerState::Launching;
+        self.state = InstallerState::Patching;
 
         patch::patch_game_files(
             patch::PatchGameFilesContext {
@@ -472,7 +473,7 @@ impl Installer {
     }
 
     pub fn unpatch_game_files(&mut self) {
-        self.state = InstallerState::Launching;
+        self.state = InstallerState::Patching;
 
         patch::unpatch_game_files(self.dirs.clone(), self.tx.clone());
     }
