@@ -39,7 +39,7 @@ text = "Odotetaan pelin käynnistymistä"
 
 [popup.outdated]
 title = "Päivitys Vaadittu"
-text = "Tämä versio ei välttämättä ole yhteensopiva. Lataa uusin versio täältä:"
+text = "Tämä versio ei välttämättä ole enää yhteensopiva. Lataa uusin versio täältä:"
 link = "Lataussivu"
 button = "Käynnistä Silti"
 
@@ -93,7 +93,7 @@ btn_close = "Sulje"
 
 [status]
 ready = "Valmis"
-starting = "Käynnistyy"
+starting = "Käynnistys"
 dirs_scan = "Paikannetaan Hakemistoja"
 patcher_found = "Löydettiin Paikkaaja"
 patcher_dl = "Ladataan Paikkaajaa"
