@@ -1,7 +1,7 @@
 use axum::http::HeaderMap;
 use model::Version;
 use serde::Deserialize;
-use std::sync::LazyLock;
+use std::{sync::LazyLock, time::Duration};
 
 use crate::providers::{Forgejo, Provider, get_host_and_repo, hash_file};
 
@@ -21,11 +21,14 @@ pub struct Asset {
 }
 
 pub static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
-    let mut gh_headers = HeaderMap::new();
-    gh_headers.insert("Accept", "application/json".parse().unwrap());
+    let mut headers = HeaderMap::new();
+    headers.insert("Accept", "application/json".parse().unwrap());
+    headers.insert("User-Agent", "TakingFire-SRXD-Mod-Server".parse().unwrap());
 
     reqwest::Client::builder()
-        .default_headers(gh_headers)
+        .default_headers(headers)
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(10))
         .build()
         .unwrap()
 });
@@ -33,7 +36,7 @@ pub static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 impl Provider for Forgejo {
     async fn get_versions(
         entry: &mut model::Mod,
-        progress: indicatif::ProgressBar,
+        progress: Option<indicatif::ProgressBar>,
     ) -> anyhow::Result<()> {
         let (host, repository) = get_host_and_repo(&entry.url)?;
 
@@ -47,7 +50,9 @@ impl Provider for Forgejo {
             .json()
             .await?;
 
-        progress.inc_length(releases.len() as u64);
+        if let Some(progress) = &progress {
+            progress.inc_length(releases.len() as u64);
+        }
 
         for release in releases {
             if entry
@@ -79,7 +84,9 @@ impl Provider for Forgejo {
                 }
             }
 
-            progress.inc(1);
+            if let Some(progress) = &progress {
+                progress.inc(1);
+            }
         }
 
         Ok(())

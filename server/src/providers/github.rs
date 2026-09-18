@@ -1,7 +1,7 @@
 use axum::http::HeaderMap;
 use model::Version;
 use serde::Deserialize;
-use std::sync::LazyLock;
+use std::{sync::LazyLock, time::Duration};
 
 use crate::providers::{GitHub, Provider, get_host_and_repo, hash_file};
 
@@ -21,6 +21,9 @@ pub struct Asset {
     pub digest: Option<String>,
 }
 
+const INSTALLER_URL: &str =
+    "https://api.github.com/repos/TakingFire/SRXDModManager/releases/latest";
+
 pub static TOKEN: LazyLock<Option<String>> =
     LazyLock::new(|| std::env::var("GH_SERVER_TOKEN").ok());
 
@@ -31,6 +34,8 @@ pub static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
     headers.insert("X-GitHub-Api-Version", "2026-03-10".parse().unwrap());
 
     reqwest::Client::builder()
+        .connect_timeout(Duration::from_secs(5))
+        .timeout(Duration::from_secs(10))
         .default_headers(headers)
         .build()
         .unwrap()
@@ -39,7 +44,7 @@ pub static CLIENT: LazyLock<reqwest::Client> = LazyLock::new(|| {
 impl Provider for GitHub {
     async fn get_versions(
         entry: &mut model::Mod,
-        progress: indicatif::ProgressBar,
+        progress: Option<indicatif::ProgressBar>,
     ) -> anyhow::Result<()> {
         if TOKEN.is_none() {
             eprintln!("Warning: GH_SERVER_TOKEN not set");
@@ -56,7 +61,9 @@ impl Provider for GitHub {
             .json()
             .await?;
 
-        progress.inc_length(releases.len() as u64);
+        if let Some(progress) = &progress {
+            progress.inc_length(releases.len() as u64);
+        }
 
         for release in releases {
             if entry
@@ -94,10 +101,30 @@ impl Provider for GitHub {
                     });
                 }
             }
-
-            progress.inc(1);
+            if let Some(progress) = &progress {
+                progress.inc(1);
+            }
         }
 
         Ok(())
     }
+}
+
+pub async fn get_installer_version() -> anyhow::Result<semver::Version> {
+    let release: Release = CLIENT
+        .get(INSTALLER_URL)
+        .bearer_auth((*TOKEN).clone().unwrap())
+        .send()
+        .await?
+        .json()
+        .await?;
+
+    let version = semver::Version::parse(
+        release
+            .tag_name
+            .strip_prefix("v")
+            .unwrap_or(&release.tag_name),
+    )?;
+
+    Ok(version)
 }

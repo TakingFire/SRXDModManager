@@ -1,6 +1,6 @@
 [package]
 name = "server"
-version = "0.2.4"
+version = "0.3.0"
 edition = "2024"
 
 [dependencies]
@@ -10,13 +10,14 @@ futures = "0.3.32"
 hex = "0.4.3"
 indicatif = { version = "0.18.4" }
 model = { path = "../model" }
-natord = "1.0.9"
-reqwest = { version = "0.13.4", features = ["json", "rustls"] }
+reqwest = { version = "0.13.4", features = ["json", "rustls", "gzip"] }
+semver = "1.0.28"
 serde = "1.0.228"
 serde_json = "1.0.150"
 sha2 = "0.11.0"
 tokio = { version = "1.52.3", features = ["full"] }
 toml = "1.1.2"
+tower-http = { version = "0.7.1", features = ["compression-gzip"] }
 url = "2.5.8"
 wildmatch = { version = "2.6.1", features = ["serde"] }
 

@@ -5,9 +5,10 @@ use futures::stream::{self, StreamExt};
 use indicatif::{MultiProgress, ProgressBar};
 use model::{Manifest, Mod};
 use tokio::{self, time::interval};
+use tower_http::compression::CompressionLayer;
 
 use crate::{
-    providers::{Forgejo, GitHub, Provider, ProviderType},
+    providers::{Forgejo, GitHub, Provider, ProviderType, github},
     template::{ModTemplate, Template, get_template_github, get_template_local},
 };
 
@@ -41,7 +42,8 @@ async fn main() {
 
     let app = Router::new()
         .route("/bepinex", get(get_bepinex))
-        .route("/mods", get(get_mods));
+        .route("/mods", get(get_mods))
+        .layer(CompressionLayer::new().gzip(true));
 
     let listener = tokio::net::TcpListener::bind(format!("0.0.0.0:{}", *PORT))
         .await
@@ -74,7 +76,7 @@ async fn build_manifest() -> anyhow::Result<()> {
         .unwrap_or(
             get_template_local()
                 .await
-                .inspect_err(|_| eprintln!("Failed to read template.json"))?,
+                .inspect_err(|_| eprintln!("Failed to read template.toml"))?,
         );
 
     let mut manifest = match tokio::fs::read_to_string("mods/manifest.json").await {
@@ -86,6 +88,17 @@ async fn build_manifest() -> anyhow::Result<()> {
         mods: manifest.mods,
         ..Manifest::default()
     };
+
+    println!("Fetching installer version");
+
+    let test = github::get_installer_version().await;
+
+    if let Ok(version) = test {
+        println!("Latest version: {}", version);
+        manifest.app_version = version.to_string();
+    } else if let Err(err) = test {
+        eprintln!("{:?}", err);
+    }
 
     println!("Loading plugins");
 
@@ -131,10 +144,10 @@ async fn build_manifest() -> anyhow::Result<()> {
             async move {
                 let result = match mod_template.provider {
                     ProviderType::GitHub => {
-                        GitHub::get_versions(mod_entry, releases_progress).await
+                        GitHub::get_versions(mod_entry, Some(releases_progress)).await
                     }
                     ProviderType::Forgejo => {
-                        Forgejo::get_versions(mod_entry, releases_progress).await
+                        Forgejo::get_versions(mod_entry, Some(releases_progress)).await
                     }
                 };
 

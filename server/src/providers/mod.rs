@@ -18,7 +18,7 @@ pub enum ProviderType {
 }
 
 pub trait Provider {
-    async fn get_versions(entry: &mut Mod, progress: ProgressBar) -> Result<()>;
+    async fn get_versions(entry: &mut Mod, progress: Option<ProgressBar>) -> Result<()>;
 }
 
 pub fn get_host_and_repo(url: &str) -> Result<(String, String)> {
