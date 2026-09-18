@@ -65,12 +65,12 @@ btn_copy = "Copy"
 [popup.error]
 text = "Something went wrong (see output for details)"
 btn_retry = "Retry"
+btn_console = "Show Console"
 btn_report = "Report an issue"
 
 [popup.app_update]
 text = "A new app version is available! (%{version})"
 btn_download = "Go to Download"
-btn_hide = "Hide"
 
 [popup.mod_update]
 text = "Update available for %{count} mod(s)!"

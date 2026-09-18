@@ -63,6 +63,12 @@ impl eframe::App for Gui {
             ctx.request_repaint();
             self.installer.force_ui_update = false;
         }
+
+        if ctx.input(|i| i.viewport().visible().unwrap_or(true)) {
+            ctx.request_repaint_after(std::time::Duration::from_millis(33));
+        } else {
+            ctx.request_repaint_after(std::time::Duration::from_millis(250));
+        }
     }
 
     fn ui(&mut self, ui: &mut Ui, _frame: &mut eframe::Frame) {
@@ -98,14 +104,14 @@ impl eframe::App for Gui {
             self.draw_settings_menu(ui);
         }
 
+        if matches!(self.installer.state, InstallerState::Error) {
+            self.draw_error_bar(ui);
+        }
+
         if self.installer.config.show_outdated_app
             && self.installer.pending_update_version.is_some()
         {
             self.draw_app_update_bar(ui);
-        }
-
-        if matches!(self.installer.state, InstallerState::Error) {
-            self.draw_error_bar(ui);
         }
 
         self.draw_sidebar(ui);
@@ -119,8 +125,6 @@ impl eframe::App for Gui {
         }
 
         self.draw_mod_list(ui);
-
-        ui.request_repaint_after(std::time::Duration::from_millis(100));
     }
 }
 
@@ -251,50 +255,73 @@ impl Gui {
         });
     }
 
+    fn get_popup_fill(ui: &Ui, color: Color32) -> egui::Frame {
+        let style = egui::Frame::side_top_panel(ui.style());
+
+        style.fill(style.fill.blend(color.gamma_multiply(0.0625)))
+    }
+
     fn draw_error_bar(&mut self, ui: &mut Ui) {
-        Panel::bottom("ui_error").exact_size(28.0).show(ui, |ui| {
-            ui.horizontal_centered(|ui| {
-                ui.label(RichText::new(t!("popup.error.text")).color(Color32::RED));
-                if ui.small_button(t!("popup.error.btn_retry")).clicked() {
-                    self.installer.init();
-                }
-                if ui
-                    .small_button(t!("popup.error.btn_report"))
-                    .on_hover_text(ISSUES_URL)
-                    .clicked()
-                {
-                    ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
-                }
+        Panel::bottom("ui_error")
+            .exact_size(28.0)
+            .frame(Self::get_popup_fill(&ui, Color32::RED))
+            .show(ui, |ui| {
+                ui.horizontal_centered(|ui| {
+                    ui.label(RichText::new(t!("popup.error.text")).color(Color32::RED));
+                    if ui.small_button(t!("popup.error.btn_retry")).clicked() {
+                        self.installer.init();
+                    }
+                    if ui.small_button(t!("popup.error.btn_console")).clicked() {
+                        self.installer.config.show_app_console = true;
+                        crate::show_console(true);
+                    }
+                    if ui
+                        .small_button(t!("popup.error.btn_report"))
+                        .on_hover_text(ISSUES_URL)
+                        .clicked()
+                    {
+                        ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
+                    }
+                });
             });
-        });
     }
 
     fn draw_mod_update_bar(&mut self, ui: &mut Ui) {
-        Panel::top("ui_mod_update").exact_size(28.0).show(ui, |ui| {
-            ui.horizontal_centered(|ui| {
-                ui.label(
-                    RichText::new(t!(
-                        "popup.mod_update.text",
-                        count = self.updatable_mods.len()
-                    ))
-                    .color(Color32::from_rgb(90, 170, 255)),
-                );
-                if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
-                    self.installer.config.filter_by = FilterBy::Updatable;
-                    self.installer.force_ui_update = true;
-                }
-                if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
-                    for entry in &self.updatable_mods {
-                        self.installer.update_mod(&mut entry.clone().borrow_mut());
+        Panel::top("ui_mod_update")
+            .exact_size(28.0)
+            .frame(Self::get_popup_fill(&ui, Color32::from_rgb(90, 170, 255)))
+            .show(ui, |ui| {
+                ui.horizontal_centered(|ui| {
+                    ui.label(
+                        RichText::new(t!(
+                            "popup.mod_update.text",
+                            count = self.updatable_mods.len()
+                        ))
+                        .color(Color32::from_rgb(90, 170, 255)),
+                    );
+                    if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
+                        self.installer.config.filter_by = FilterBy::Updatable;
+                        self.installer.force_ui_update = true;
                     }
-                }
+                    if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
+                        for entry in &self.updatable_mods {
+                            self.installer.update_mod(&mut entry.clone().borrow_mut());
+                        }
+                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.take_available_width();
+                        if ui.small_button("x").clicked() {
+                            self.installer.config.show_outdated_mods = false;
+                        }
+                    });
+                });
             });
-        });
     }
 
     fn draw_app_update_bar(&mut self, ui: &mut Ui) {
         Panel::bottom("ui_app_update")
             .exact_size(28.0)
+            .frame(Self::get_popup_fill(&ui, Color32::from_rgb(90, 170, 255)))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -315,9 +342,12 @@ impl Gui {
                     {
                         ui.open_url(OpenUrl::new_tab(UPDATE_URL));
                     }
-                    if ui.small_button(t!("popup.app_update.btn_hide")).clicked() {
-                        self.installer.config.show_outdated_app = false;
-                    }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.take_available_width();
+                        if ui.small_button("x").clicked() {
+                            self.installer.config.show_outdated_app = false;
+                        }
+                    });
                 });
             });
     }
@@ -325,6 +355,7 @@ impl Gui {
     fn draw_unrecognized_bar(&mut self, ui: &mut Ui) {
         Panel::top("ui_unrecognized")
             .exact_size(28.0)
+            .frame(Self::get_popup_fill(&ui, Color32::from_rgb(255, 160, 80)))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -350,6 +381,12 @@ impl Gui {
                                 .uninstall_mod(&mut entry.clone().borrow_mut(), true);
                         }
                     }
+                    ui.with_layout(egui::Layout::right_to_left(egui::Align::Center), |ui| {
+                        ui.take_available_width();
+                        if ui.small_button("x").clicked() {
+                            self.installer.config.show_unrecognized_mods = false;
+                        }
+                    });
                 });
             });
     }
@@ -558,12 +595,13 @@ impl Gui {
 
     fn draw_mod_entry(&mut self, ui: &mut Ui, entry: &mut ModEntry) {
         let accent_color = if !entry.recognized {
-            Color32::from_rgb(255, 160, 80)
-        } else if matches!(
-            entry.state,
-            ModEntryState::Installed | ModEntryState::PendingVersionChangeFrom(_)
-        ) {
-            Color32::from_rgb(90, 170, 255)
+            Color32::from_rgb(255, 160, 80).gamma_multiply(0.25)
+        } else if matches!(entry.state, ModEntryState::PendingVersionChangeFrom(_)) {
+            let time = ui.input(|i| i.time) as f32;
+            let pulse = (time * 1.5).sin().abs() * 0.25 + 0.25;
+            Color32::from_rgb(90, 170, 255).gamma_multiply(pulse)
+        } else if matches!(entry.state, ModEntryState::Installed) {
+            Color32::from_rgb(90, 170, 255).gamma_multiply(0.25)
         } else {
             Color32::TRANSPARENT
         };
@@ -572,9 +610,9 @@ impl Gui {
         let border_color = ui.visuals().window_stroke.color;
 
         Frame::group(ui.style())
-            .fill(fill_color.blend(accent_color.gamma_multiply(0.0625)))
+            .fill(fill_color.blend(accent_color.gamma_multiply(0.25)))
             .stroke(Stroke {
-                color: border_color.blend(accent_color.gamma_multiply(0.25)),
+                color: border_color.blend(accent_color.gamma_multiply(0.75)),
                 ..ui.visuals().window_stroke
             })
             .show(ui, |ui| {
