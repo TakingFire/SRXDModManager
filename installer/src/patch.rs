@@ -37,6 +37,7 @@ pub enum TaskContext {
 pub struct GetManifestContext {
     pub out_manifest: Manifest,
     pub out_outdated: bool,
+    pub out_update: Option<String>,
 }
 
 pub struct GetInstalledModsContext {
@@ -227,14 +228,21 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?;
 
-            let own_version = semver::Version::parse(&model::get_version()).unwrap();
-            let api_version = semver::Version::parse(&header.version).unwrap();
-
-            ctx.out_outdated = api_version.major > own_version.major;
+            let own_api_version = semver::Version::parse(&model::get_version()).unwrap();
+            if let Ok(server_api_version) = semver::Version::parse(&header.version) {
+                ctx.out_outdated = server_api_version.major > own_api_version.major;
+            }
 
             ctx.out_manifest = serde_json::from_str(&res)
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?;
+
+            let own_app_version = semver::Version::parse(env!("CARGO_PKG_VERSION")).unwrap();
+            if let Ok(server_app_version) = semver::Version::parse(&ctx.out_manifest.app_version)
+                && server_app_version > own_app_version
+            {
+                ctx.out_update = Some(server_app_version.to_string());
+            }
 
             Ok(())
         }()

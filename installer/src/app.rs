@@ -76,6 +76,7 @@ pub struct Installer {
     pub log: Vec<MessageType>,
 
     pub force_ui_update: bool,
+    pub pending_update_version: Option<String>,
 
     tx: Sender<StatusType>,
     rx: Receiver<StatusType>,
@@ -95,6 +96,7 @@ impl Default for Installer {
             log: Vec::default(),
 
             force_ui_update: false,
+            pending_update_version: None,
 
             tx,
             rx,
@@ -136,6 +138,7 @@ impl Installer {
                         if ctx.out_outdated {
                             self.state = InstallerState::Outdated;
                         } else {
+                            self.pending_update_version = ctx.out_update;
                             self.get_patcher();
                         }
                     }

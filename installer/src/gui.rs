@@ -98,6 +98,12 @@ impl eframe::App for Gui {
             self.draw_settings_menu(ui);
         }
 
+        if self.installer.config.show_outdated_app
+            && self.installer.pending_update_version.is_some()
+        {
+            self.draw_app_update_bar(ui);
+        }
+
         if matches!(self.installer.state, InstallerState::Error) {
             self.draw_error_bar(ui);
         }
@@ -105,7 +111,7 @@ impl eframe::App for Gui {
         self.draw_sidebar(ui);
 
         if self.installer.config.show_outdated_mods && !self.updatable_mods.is_empty() {
-            self.draw_update_bar(ui);
+            self.draw_mod_update_bar(ui);
         }
 
         if self.installer.config.show_unrecognized_mods && !self.unrecognized_mods.is_empty() {
@@ -131,7 +137,8 @@ impl Gui {
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("popup.outdated.title")).size(18.0));
                 ui.label(t!("popup.outdated.text"));
-                ui.hyperlink_to(t!("popup.outdated.link"), UPDATE_URL);
+                ui.hyperlink_to(t!("popup.outdated.link"), UPDATE_URL)
+                    .on_hover_text(UPDATE_URL);
 
                 ui.add_space(8.0);
                 ui.vertical_centered_justified(|ui| {
@@ -251,15 +258,19 @@ impl Gui {
                 if ui.small_button(t!("popup.error.btn_retry")).clicked() {
                     self.installer.init();
                 }
-                if ui.small_button(t!("popup.error.btn_report")).clicked() {
+                if ui
+                    .small_button(t!("popup.error.btn_report"))
+                    .on_hover_text(ISSUES_URL)
+                    .clicked()
+                {
                     ui.ctx().open_url(OpenUrl::new_tab(ISSUES_URL));
                 }
             });
         });
     }
 
-    fn draw_update_bar(&mut self, ui: &mut Ui) {
-        Panel::top("ui_update").exact_size(28.0).show(ui, |ui| {
+    fn draw_mod_update_bar(&mut self, ui: &mut Ui) {
+        Panel::top("ui_mod_update").exact_size(28.0).show(ui, |ui| {
             ui.horizontal_centered(|ui| {
                 ui.label(
                     RichText::new(t!(
@@ -279,6 +290,36 @@ impl Gui {
                 }
             });
         });
+    }
+
+    fn draw_app_update_bar(&mut self, ui: &mut Ui) {
+        Panel::bottom("ui_app_update")
+            .exact_size(28.0)
+            .show(ui, |ui| {
+                ui.horizontal_centered(|ui| {
+                    ui.label(
+                        RichText::new(t!(
+                            "popup.app_update.text",
+                            version = self
+                                .installer
+                                .pending_update_version
+                                .clone()
+                                .unwrap_or_default()
+                        ))
+                        .color(Color32::from_rgb(90, 170, 255)),
+                    );
+                    if ui
+                        .small_button(t!("popup.app_update.btn_download"))
+                        .on_hover_text(UPDATE_URL)
+                        .clicked()
+                    {
+                        ui.open_url(OpenUrl::new_tab(UPDATE_URL));
+                    }
+                    if ui.small_button(t!("popup.app_update.btn_hide")).clicked() {
+                        self.installer.config.show_outdated_app = false;
+                    }
+                });
+            });
     }
 
     fn draw_unrecognized_bar(&mut self, ui: &mut Ui) {
