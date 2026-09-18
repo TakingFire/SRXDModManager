@@ -67,6 +67,11 @@ text = "Jokin meni pieleen (lisätiedot tulosteessa)"
 btn_retry = "Yritä uudelleen"
 btn_report = "Ilmoita ongelmasta"
 
+[popup.app_update]
+text = "A new app version is available! (%{version})"
+btn_download = "Go to Download"
+btn_hide = "Hide"
+
 [popup.mod_update]
 text = "Päivitys saatavilla %{count} modille!"
 btn_show = "Näytä"
