@@ -16,6 +16,7 @@ name = "SRXDManager"
 path = "src/main.rs"
 
 [dependencies]
+colored = "3.1.1"
 configparser = "3.1.0"
 eframe = { version = "0.36.1", default-features = false, features = [
   "glow",

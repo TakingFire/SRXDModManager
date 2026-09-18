@@ -2,6 +2,7 @@
 
 use std::time::Duration;
 
+use colored::Colorize;
 use configparser::ini::Ini;
 use eframe::egui::{Color32, RichText};
 use flume::Sender;
@@ -88,12 +89,21 @@ impl MessageType {
         Self::Error(msg.into())
     }
 
-    pub fn text(&self) -> RichText {
+    pub fn rich_text(&self) -> RichText {
         match self {
             Self::Default(s) => RichText::new(s),
             Self::Success(s) => RichText::new(s).color(Color32::from_rgb(90, 170, 255)),
             Self::Warning(s) => RichText::new(s).color(Color32::from_rgb(255, 160, 80)),
             Self::Error(s) => RichText::new(s).color(Color32::RED),
+        }
+    }
+
+    pub fn colored_text(&self) -> colored::ColoredString {
+        match self {
+            Self::Default(s) => s.normal(),
+            Self::Success(s) => s.bright_blue(),
+            Self::Warning(s) => s.bright_yellow(),
+            Self::Error(s) => s.bright_red(),
         }
     }
 }

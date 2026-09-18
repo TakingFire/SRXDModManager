@@ -320,7 +320,7 @@ impl Installer {
     }
 
     pub fn log(&mut self, msg: MessageType) {
-        println!("{:?}", msg);
+        eprintln!("{}", msg.colored_text());
         self.log.push(msg);
         self.force_ui_update = true;
     }

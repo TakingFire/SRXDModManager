@@ -49,13 +49,15 @@ fn main() -> eframe::Result {
 pub fn initialize_console() {
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows_sys::Win32::{
-            System::Console::{AllocConsole, GetConsoleWindow},
-            UI::WindowsAndMessaging::{SW_HIDE, ShowWindow},
-        };
+        use windows_sys::Win32::{System::Console::*, UI::WindowsAndMessaging::*};
 
         if AllocConsole() != 0 {
             ShowWindow(GetConsoleWindow(), SW_HIDE);
+
+            let handle = GetStdHandle(STD_OUTPUT_HANDLE);
+            let mut mode = 0;
+            GetConsoleMode(handle, &mut mode);
+            SetConsoleMode(handle, mode | ENABLE_VIRTUAL_TERMINAL_PROCESSING);
         }
     }
 }
@@ -63,10 +65,7 @@ pub fn initialize_console() {
 pub fn show_console(enabled: bool) {
     #[cfg(target_os = "windows")]
     unsafe {
-        use windows_sys::Win32::{
-            System::Console::GetConsoleWindow,
-            UI::WindowsAndMessaging::{SW_HIDE, SW_SHOW, ShowWindow},
-        };
+        use windows_sys::Win32::{System::Console::*, UI::WindowsAndMessaging::*};
 
         if enabled {
             ShowWindow(GetConsoleWindow(), SW_SHOW);

@@ -465,7 +465,7 @@ impl Gui {
                                     // ui.set_height((ui.available_height() - 5.0).max(0.0));
                                     ScrollArea::vertical().stick_to_bottom(true).show(ui, |ui| {
                                         for msg in &self.installer.log {
-                                            ui.label(msg.text());
+                                            ui.label(msg.rich_text());
                                         }
                                     });
                                 });
