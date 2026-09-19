@@ -1,0 +1,149 @@
+[button]
+run_modded = "実行する（Mod）"
+run_vanilla = "実行する（標準）"
+open_settings = "設定を開く"
+disable_popup = "また見せない"
+
+[label]
+categories = "種類"
+output = "出力"
+sort = "分類："
+search = "検索する"
+category_all = "全てのMod"
+
+[config.filter]
+all = "全て"
+installed = "インスコ"
+uninstalled = "アンインスコ"
+
+[config.sort]
+recent = "最近"
+title = "題名"
+author = "作者"
+
+[modentry]
+author = "作者：%{name}"
+unknown = "無名"
+
+  [modentry.button]
+  install = "インスコする"
+  downloading = "ダウンロード中"
+  uninstall = "アンインスコする"
+  removing = "削除中"
+  update = "アップデートする"
+  open_folder = "フォルダを開く"
+
+[popup.launching]
+title = "ゲームを実行している"
+text = "ゲームを待っている"
+
+[popup.outdated]
+title = "アップデートが必要"
+text = "この版は非対応の可能性がある。ここから最近の版を取ってください："
+link = "ダウンロードのページ"
+button = "これでも立ち上げる"
+
+[popup.disclaimer]
+title = "警告"
+text = "Modの誠が確かめられない。自己責任でダウンロードして"
+button = "分かりました"
+
+[popup.linux]
+title = "Linux Mod のこと"
+text1 = "ProtonでSpin RhythmのWindows版を実行しないとダメです。ここでStep 0に従って："
+link = "SpinShare Mod ガイド"
+text2 = "その後でリスタートして。（もうProtonを使っていればこの メッセージ を無視してもいい）"
+button = "完了"
+
+[popup.existing_config]
+title = "Modの設定が見つけた"
+text1 = "もうあるModの設定ファイルがある。"
+text2 = "コピーしてほしい？"
+btn_cancel = "キャンセル"
+btn_copy = "コピー"
+
+[popup.error]
+text = "何かいかれた（出力に詳細がある）"
+btn_retry = "リトライ"
+btn_console = "コンソールを見せ"
+btn_report = "Report an issue"
+
+[popup.app_update]
+text = "新しい版が利用可能（%{version}）"
+btn_download = "ダウンロードのページへ"
+
+[popup.mod_update]
+text = "%{count}つのModのアップデートが利用可能"
+btn_show = "見せる"
+btn_update = "全てをアップデートする"
+
+[popup.mod_unrecognized]
+text = "%{count}つの不明なModが見つけた"
+btn_show = "見せる"
+btn_remove = "全部を削除する"
+
+[settings]
+title = "設定"
+btn_plugins_folder = "Modフォルダを開く"
+btn_game_folder = "ゲームフォルダを開く"
+btn_steam_folder = "Steamフォルダを開く"
+btn_remove_mods = "全てのModを削除する"
+btn_reset_app = "全てのデータを削除する"
+show_game_console = "ゲームのコンソルを見せて"
+show_app_console = "Appのコンスルを見せて"
+show_unrecognized_mods = "不明なModを見せて"
+show_outdated_mods = "Modのアップデートを見せて"
+show_outdated_app = "Appのアップデートを見せて"
+btn_close = "完了"
+
+[status]
+ready = "準備できた"
+starting = "はじめている"
+dirs_scan = "ディレクトリ を見つけっている"
+patcher_found = "Patcherが見つけた"
+patcher_dl = "Patcherをダウンロードしている"
+zip_extract = "アーカイブを解凍している"
+mods_fetch = "Modリストを取っている"
+mods_scan = "ディレクトリをスキャンしている"
+mods_loaded = "%{count}つのModをロードした"
+mods_count = "%{count}つのModをインスコした"
+mod_download = "%{name}をダウンロードしている"
+mod_install = "%{name}をダウンロードした"
+mod_uninstall = "%{name}を削除した"
+mod_remove = "%{name}を削除している"
+config_found = "Modの設定が見つけた"
+config_copied = "Modの設定をコピーした"
+config_set = "設定を書いている"
+override_set = "オーバーライド を書いている"
+files_copy = "ファイルをコピーしている"
+files_remove = "Patchファイルを削除している"
+launch_game = "ゲームを実行している"
+
+[warning]
+mod_unrecognized = "%{count}つのModは不明"
+mod_required = "これは他の%{count}つのModに必要"
+unityplayer = "UnityPlayer.dll はリネームされたやなくなった"
+timed_out = "タイムアウトした"
+
+[error]
+app_dir = "App ディレクトリはダメ"
+steam_dir = "Steam ディレクトリはダメ"
+game_dir = "ゲーム ディレクトリはダメ"
+web_request = "サーバーリクエストが失敗した"
+download = "ダウンロードが失敗した"
+zip_read = "アーカイブの読み込みに失敗した"
+zip_extract = "アーカイブの解凍に失敗した"
+path_locate = "パスが見つけなかった"
+path_create = "フォルダの作成に失敗した"
+path_open = "フォルダを開くのが失敗した"
+file_locate = "ファイルが見つけなかった"
+file_copy = "ファイルがコピーに失敗した"
+file_read = "データの読み込みに失敗した"
+file_write = "でーたの書き込みに失敗した"
+file_rename = "ファイルのリネームに失敗した"
+file_delete = "ファイルの削除に失敗した"
+file_format = "ファイル形式はダメ"
+config_locate = "設定ファイルが見つけない"
+config_read = "設定ファイルの読み込みに失敗した"
+config_write = "設定ファイルの書き込みに失敗した"
+launch_game = "ゲームの実行に失敗した"

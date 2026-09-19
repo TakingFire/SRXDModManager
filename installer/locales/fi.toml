@@ -1,0 +1,149 @@
+[button]
+run_modded = "Käynnistä (Modattu)"
+run_vanilla = "Käynnistä (Vanilla)"
+open_settings = "Avaa Asetukset"
+disable_popup = "Älä näytä uudestaan"
+
+[label]
+categories = "Kategoriat"
+output = "Tuloste"
+sort = "Järjestä:"
+search = "Haku"
+category_all = "Kaikki Modit"
+
+[config.filter]
+all = "Kaikki"
+installed = "Asennettu"
+uninstalled = "Ei asennettu"
+
+[config.sort]
+recent = "Viimeisin"
+title = "Nimi"
+author = "Omistaja"
+
+[modentry]
+author = "tekijä: %{name}"
+unknown = "Tuntematon"
+
+  [modentry.button]
+  install = "Asenna"
+  downloading = "Ladataan"
+  uninstall = "Poista Asennus"
+  removing = "Poistetaan"
+  update = "Päivitä"
+  open_folder = "Avaa Kansio"
+
+[popup.launching]
+title = "Käynnistetään Peliä"
+text = "Odotetaan pelin käynnistymistä"
+
+[popup.outdated]
+title = "Päivitys Vaadittu"
+text = "Tämä versio ei välttämättä ole enää yhteensopiva. Lataa uusin versio täältä:"
+link = "Lataussivu"
+button = "Käynnistä Silti"
+
+[popup.disclaimer]
+title = "Varoitus"
+text = "Modijulkaisuja ei tarkasteta säännöllisesti. Lataa omalla vastuullasi."
+button = "Ymmärrän"
+
+[popup.linux]
+title = "Linux Modaus"
+text1 = "Sinun täytyy käynnistää pelin Windows-koontiversio Protonin kautta. Aloita vaiheesta 0 täällä:"
+link = "SpinShare Modaus Opas"
+text2 = "ja käynnistä ohjelma uudelleen. (Jos käytät jo Protonia, tätä ei tarvitse huomioida)"
+button = "Sulje"
+
+[popup.existing_config]
+title = "Modiasetuksia Löydetty"
+text1 = "Sinulla on olemassa olevia asetustiedostoja."
+text2 = "Haluatko kopioida ne?"
+btn_cancel = "Peru"
+btn_copy = "Kopioi"
+
+[popup.error]
+text = "Jokin meni pieleen (lisätiedot tulosteessa)"
+btn_retry = "Yritä uudelleen"
+btn_console = "Show Console"
+btn_report = "Ilmoita ongelmasta"
+
+[popup.app_update]
+text = "A new app version is available! (%{version})"
+btn_download = "Go to Download"
+
+[popup.mod_update]
+text = "Päivitys saatavilla %{count} modille!"
+btn_show = "Näytä"
+btn_update = "Päivitä Kaikki"
+
+[popup.mod_unrecognized]
+text = "Tuntemattomia modeja: %{count}"
+btn_show = "Näytä"
+btn_remove = "Poista Kaikki"
+
+[settings]
+title = "Asetukset"
+btn_plugins_folder = "Avaa Modikansio"
+btn_game_folder = "Avaa Pelikansio"
+btn_steam_folder = "Avaa Steam- kansio"
+btn_remove_mods = "Poista Kaikki Modit"
+btn_reset_app = "Nollaa Sovellustiedot"
+show_game_console = "Näytä Pelikonsoli"
+show_app_console = "Näytä Sovelluskonsoli"
+show_unrecognized_mods = "Näytä Tuntemattomat Modit"
+show_outdated_mods = "Näytä Modipäivitykset"
+show_outdated_app = "Näytä Sovelluspäivitykset"
+btn_close = "Sulje"
+
+[status]
+ready = "Valmis"
+starting = "Käynnistys"
+dirs_scan = "Paikannetaan Hakemistoja"
+patcher_found = "Löydettiin Paikkaaja"
+patcher_dl = "Ladataan Paikkaajaa"
+zip_extract = "Puretaan Arkistoa"
+mods_fetch = "Haetaan Modilistaa"
+mods_scan = "Skannataan Hakemistoa"
+mods_loaded = "Ladattiin %{count} Modia"
+mods_count = "Modeja asennettu: %{count}"
+mod_download = "Ladataan %{name}"
+mod_install = "%{name} Asennettu"
+mod_uninstall = "%{name} Poistettu"
+mod_remove = "Poistetaan %{name}"
+config_found = "Löydettiin Modiasetuksia"
+config_copied = "Modiasetukset Kopioitu"
+config_set = "Asetetaan Asetuksia"
+override_set = "Asetetaan Ohitusta"
+files_copy = "Kopioidaan Tiedostoja"
+files_remove = "Poistetaan Paikkaustiedostoja"
+launch_game = "Käynnistetään Peliä"
+
+[warning]
+mod_unrecognized = "Tunnistamattomia Modeja: %{count}"
+mod_required = "%{count} modi(a) tarvitsee tämän modin"
+unityplayer = "UnityPlayer Nimetty Uudelleen tai Puuttuu"
+timed_out = "Aikakatkaisu"
+
+[error]
+app_dir = "Tuntematon Sovellushakemisto"
+steam_dir = "Tuntematon Steam- hakemisto"
+game_dir = "Tuntematon Pelihakemisto"
+web_request = "Palvelinpyyntö Epäonnistui"
+download = "Lataus Epäonnistui"
+zip_read = "Arkiston Lukeminen Epäonnistui"
+zip_extract = "Arkiston Purku Epäonnistui"
+path_locate = "Polun Haku Epäonnistui"
+path_create = "Tiedoston Luonti Epäonnistui"
+path_open = "Kansion Avaus Epäonnistui"
+file_locate = "Tiedoston Haku Epäonnistui"
+file_copy = "Tiedoston Kopiointi Epäonnistui"
+file_read = "Tietojen Lukeminen Epäonnistui"
+file_write = "Tietojen Kirjoitus Epäonnistui"
+file_rename = "Tiedoston Nimeäminen Epäonnistui"
+file_delete = "Tiedoston Poisto Epäonnistui"
+file_format = "Tuntematon Tiedostotyyppi"
+config_locate = "Asetusten Haku Epäonnistui"
+config_read = "Asetusten Luku Epäonnistui"
+config_write = "Asetusten Teko Epäonnistui"
+launch_game = "Pelin Käynnistys Epäonnistui"
