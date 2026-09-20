@@ -1,6 +1,6 @@
 [button]
-run_modded = "Käynnistä (Modattu)"
-run_vanilla = "Käynnistä (Vanilla)"
+run_modded = "Run (Modded)"
+run_vanilla = "Run (Vanilla)"
 open_settings = "Avaa Asetukset"
 disable_popup = "Älä näytä uudestaan"
 
