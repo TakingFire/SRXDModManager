@@ -27,10 +27,6 @@ flume = "0.12.0"
 model = { path = "../model" }
 open = "5.3.5"
 parking_lot = "0.12.5"
-reqwest = { version = "0.13.1", default-features = false, features = [
-  "http2",
-  "native-tls"
-] }
 rust-i18n = "4.1.0"
 semver = "1.0.28"
 serde = { version = "1.0.229", features = ["derive"] }
@@ -52,10 +48,17 @@ eframe = { version = "0.36.1", default-features = false, features = [
   "wayland",
   "x11"
 ] }
-openssl = { version = "0.10", features = ["vendored"] }
 regashii = "0.4.0"
+reqwest = { version = "0.13.1", default-features = false, features = [
+  "http2",
+  "rustls"
+] }
 
 [target.'cfg(target_os = "windows")'.dependencies]
+reqwest = { version = "0.13.1", default-features = false, features = [
+  "http2",
+  "native-tls"
+] }
 windows-sys = { version = "0.61.2", features = ["Win32_System_Console", "Win32_UI_WindowsAndMessaging"] }
 
 [target.'cfg(target_os = "windows")'.build-dependencies]
