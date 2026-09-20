@@ -1,6 +1,6 @@
 [button]
-run_modded = "Run (Modded)"
-run_vanilla = "Run (Vanilla)"
+run_modded = "Käynnistä (modattu)"
+run_vanilla = "Käynnistä (vanilla)"
 open_settings = "Avaa Asetukset"
 disable_popup = "Älä näytä uudestaan"
 
@@ -65,12 +65,12 @@ btn_copy = "Kopioi"
 [popup.error]
 text = "Jokin meni pieleen (lisätiedot tulosteessa)"
 btn_retry = "Yritä uudelleen"
-btn_console = "Show Console"
+btn_console = "Näytä konsoli"
 btn_report = "Ilmoita ongelmasta"
 
 [popup.app_update]
-text = "A new app version is available! (%{version})"
-btn_download = "Go to Download"
+text = "Uusi sovellusversio saatavilla! (%{version})"
+btn_download = "Siirry lataamaan"
 
 [popup.mod_update]
 text = "Päivitys saatavilla %{count} modille!"
