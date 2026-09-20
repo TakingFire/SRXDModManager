@@ -1,18 +1,16 @@
 #![allow(clippy::redundant_closure_call)]
 
-use std::time::Duration;
+use std::{path::PathBuf, time::Duration};
 
 use colored::Colorize;
 use configparser::ini::Ini;
-use eframe::egui::{Color32, RichText};
+use eframe::egui::RichText;
 use flume::Sender;
 use model::Manifest;
+use serde::{Deserialize, Serialize};
 use tokio::{fs, time::error::Elapsed};
 
-use crate::{
-    app::{DirectoryList, ModEntry, ModEntryState},
-    gui,
-};
+use crate::{app::DirectoryList, gui, modentry::ModEntry};
 
 const MANIFEST_URL: &str = "https://srxd.bacur.xyz/mods";
 const PATCHER_URL: &str = "https://srxd.bacur.xyz/bepinex";
@@ -30,7 +28,7 @@ pub enum TaskContext {
     CopyExistingConfig(DirectoryList),
 
     InstallMod(InstallModContext),
-    UninstallMod(InstallModContext),
+    UninstallMod(UninstallModContext),
 
     PatchGameFiles(PatchGameFilesContext),
     UnpatchGameFiles(DirectoryList),
@@ -46,12 +44,20 @@ pub struct GetManifestContext {
 
 pub struct GetInstalledModsContext {
     pub directories: DirectoryList,
-    pub out_digest_list: Vec<String>,
+    pub out_id_list: Vec<ModIdentifier>,
+    pub out_path_list: Vec<PathBuf>,
 }
 
 pub struct InstallModContext {
     pub directories: DirectoryList,
     pub entry: ModEntry,
+    pub out_path: PathBuf,
+}
+
+pub struct UninstallModContext {
+    pub directories: DirectoryList,
+    pub entry: ModEntry,
+    pub path: PathBuf,
 }
 
 pub struct PatchGameFilesContext {
@@ -109,6 +115,14 @@ impl MessageType {
             Self::Error(s) => s.bright_red(),
         }
     }
+}
+
+#[derive(Debug, Default, Serialize, Deserialize)]
+#[serde(default)]
+pub struct ModIdentifier {
+    pub id: String,
+    pub digest: String,
+    pub version: String,
 }
 
 fn send_task_result(result: Result<(), MessageType>, ctx: TaskContext, tx: &Sender<StatusType>) {
@@ -295,8 +309,62 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.file_read")))?
             {
-                ctx.out_digest_list
-                    .push(entry.file_name().to_string_lossy().into());
+                let Ok(metadata) = entry.metadata().await else {
+                    let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+                        "error.path_locate"
+                    ))));
+
+                    continue;
+                };
+
+                let path = entry.path();
+                if metadata.is_dir() {
+                    let id_dir = path.join(".modinfo");
+
+                    if !fs::try_exists(&id_dir).await.unwrap_or(false) {
+                        let folder_name: String = entry.file_name().to_string_lossy().into();
+
+                        ctx.out_path_list.push(path);
+                        ctx.out_id_list.push(ModIdentifier {
+                            id: folder_name.clone(),
+                            digest: folder_name.clone(),
+                            ..Default::default()
+                        });
+                        continue;
+                    }
+
+                    let Ok(file) = fs::read_to_string(&id_dir).await.inspect_err(|e| {
+                        eprintln!("{e}");
+                        let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+                            "error.file_read"
+                        ))));
+                    }) else {
+                        continue;
+                    };
+
+                    let Ok(identifier) =
+                        serde_json::from_str::<ModIdentifier>(&file).inspect_err(|e| {
+                            eprintln!("{e}");
+                            let _ = tx.send(StatusType::Message(MessageType::warning(t!(
+                                "error.file_read"
+                            ))));
+                        })
+                    else {
+                        continue;
+                    };
+
+                    ctx.out_path_list.push(path);
+                    ctx.out_id_list.push(identifier);
+                } else if path.extension() == Some("dll".as_ref()) {
+                    let file_name: String = entry.file_name().to_string_lossy().into();
+
+                    ctx.out_path_list.push(path);
+                    ctx.out_id_list.push(ModIdentifier {
+                        id: file_name.clone(),
+                        digest: file_name.clone(),
+                        ..Default::default()
+                    });
+                }
             }
 
             Ok(())
@@ -348,7 +416,7 @@ pub fn copy_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
     });
 }
 
-pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
+pub fn install_mod(mut ctx: InstallModContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let _ = tx.send(StatusType::Message(MessageType::default(t!(
             "status.mod_download",
@@ -356,6 +424,7 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
         ))));
 
         let result = async || -> Result<(), MessageType> {
+            let id = &ctx.entry.entry.id;
             let version = &ctx.entry.entry.versions[ctx.entry.selected_version];
 
             let plugin_name = ctx.entry.entry.file.replace('*', "");
@@ -365,7 +434,9 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                 .as_ref()
                 .unwrap()
                 .join("BepInEx/plugins")
-                .join(&version.digest);
+                .join(id);
+
+            ctx.out_path = plugin_dir.clone();
 
             fs::create_dir_all(&plugin_dir)
                 .await
@@ -415,6 +486,19 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
                 _ => {}
             }
 
+            let identifier = serde_json::to_string_pretty(&ModIdentifier {
+                id: id.clone(),
+                digest: version.digest.clone(),
+                version: version.name.clone(),
+            })
+            .inspect_err(|e| eprintln!("{e}"))
+            .map_err(|_| MessageType::error(t!("error.file_write")))?;
+
+            fs::write(&plugin_dir.join(".modinfo"), identifier)
+                .await
+                .inspect_err(|e| eprintln!("{e}"))
+                .map_err(|_| MessageType::error(t!("error.file_write")))?;
+
             Ok(())
         }()
         .await;
@@ -423,7 +507,7 @@ pub fn install_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
     });
 }
 
-pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
+pub fn uninstall_mod(ctx: UninstallModContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let _ = tx.send(StatusType::Message(MessageType::default(t!(
             "status.mod_remove",
@@ -431,33 +515,33 @@ pub fn uninstall_mod(ctx: InstallModContext, tx: Sender<StatusType>) {
         ))));
 
         let result = async || -> Result<(), MessageType> {
-            let current_version = match ctx.entry.state {
-                ModEntryState::PendingVersionChangeFrom(v) => v,
-                _ => ctx.entry.selected_version,
-            };
-
-            let version = &ctx.entry.entry.versions[current_version];
-
             let plugin_dir = ctx
                 .directories
                 .app_dir
                 .as_ref()
                 .unwrap()
-                .join("BepInEx/plugins")
-                .join(&version.digest);
+                .join("BepInEx/plugins");
 
-            let metadata = fs::metadata(&plugin_dir)
+            if ctx.path == plugin_dir || !ctx.path.starts_with(plugin_dir) {
+                eprintln!(
+                    "Attempted to delete outside of plugins folder: {}",
+                    ctx.path.to_string_lossy()
+                );
+                return Err(MessageType::error(t!("error.file_delete")));
+            }
+
+            let metadata = fs::metadata(&ctx.path)
                 .await
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_locate")))?;
 
             if metadata.is_dir() {
-                fs::remove_dir_all(&plugin_dir)
+                fs::remove_dir_all(&ctx.path)
                     .await
                     .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.file_delete")))?;
             } else {
-                fs::remove_file(&plugin_dir)
+                fs::remove_file(&ctx.path)
                     .await
                     .inspect_err(|e| eprintln!("{e}"))
                     .map_err(|_| MessageType::error(t!("error.file_delete")))?;

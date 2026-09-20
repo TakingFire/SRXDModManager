@@ -5,56 +5,15 @@ use model::{Mod, Version};
 
 use crate::{
     config::InstallerConfig,
+    modentry::{ModEntry, ModEntryRef, ModEntryState},
     patch::{self, MessageType, StatusType},
 };
-
-#[derive(Debug, Default, Clone)]
-pub enum ModEntryState {
-    #[default]
-    Uninstalled,
-    PendingUninstall,
-    Installed,
-    PendingInstall,
-    PendingVersionChangeFrom(usize),
-}
-
-#[derive(Debug, Default, Clone)]
-pub struct ModEntry {
-    pub entry: Mod,
-    pub state: ModEntryState,
-    pub selected_version: usize,
-    pub active_dependents: usize,
-    pub recognized: bool,
-}
-
-pub type ModEntryRef = Rc<RefCell<ModEntry>>;
 
 #[derive(Default, Clone)]
 pub struct DirectoryList {
     pub app_dir: Option<PathBuf>,
     pub game_dir: Option<PathBuf>,
     pub steam_dir: Option<PathBuf>,
-}
-
-impl ModEntry {
-    pub fn set_version(&mut self, version: usize) {
-        if version == self.selected_version {
-            return;
-        }
-
-        match self.state {
-            ModEntryState::Installed => {
-                self.state = ModEntryState::PendingVersionChangeFrom(self.selected_version);
-            }
-            ModEntryState::PendingVersionChangeFrom(prev) if version == prev => {
-                self.state = ModEntryState::Installed;
-            }
-
-            _ => {}
-        }
-
-        self.selected_version = version;
-    }
 }
 
 #[derive(Debug, Default)]
@@ -82,6 +41,7 @@ pub struct Installer {
     rx: Receiver<StatusType>,
     id_map: HashMap<String, ModEntryRef>,
     digest_map: HashMap<String, (ModEntryRef, usize)>,
+    id_path_map: HashMap<String, PathBuf>,
 }
 
 impl Default for Installer {
@@ -102,6 +62,7 @@ impl Default for Installer {
             rx,
             id_map: HashMap::default(),
             digest_map: HashMap::default(),
+            id_path_map: HashMap::default(),
         }
     }
 }
@@ -151,9 +112,9 @@ impl Installer {
                     patch::TaskContext::GetInstalledMods(ctx) => {
                         let mut installed_count = 0;
 
-                        for digest in &ctx.out_digest_list {
+                        for (mod_id, mod_path) in ctx.out_id_list.iter().zip(&ctx.out_path_list) {
                             if let Some((entry_ref, installed_version)) =
-                                self.digest_map.get(digest)
+                                self.digest_map.get(&mod_id.digest)
                             {
                                 let mut entry = entry_ref.borrow_mut();
 
@@ -162,6 +123,9 @@ impl Installer {
                                 entry.set_version(0);
                                 installed_count += 1;
 
+                                self.id_path_map
+                                    .insert(entry.entry.id.clone(), mod_path.clone());
+
                                 for dependency in self.get_dependencies(&entry) {
                                     dependency.borrow_mut().active_dependents += 1;
                                 }
@@ -169,11 +133,11 @@ impl Installer {
                                 let entry = ModEntry {
                                     recognized: false,
                                     entry: Mod {
-                                        id: digest.into(),
-                                        name: digest.into(),
+                                        id: mod_id.id.clone(),
+                                        name: mod_id.id.clone(),
                                         author: t!("modentry.unknown").into(),
                                         versions: vec![Version {
-                                            digest: digest.into(),
+                                            digest: mod_id.digest.clone(),
                                             ..Default::default()
                                         }],
                                         ..Default::default()
@@ -185,8 +149,10 @@ impl Installer {
 
                                 let entry_ref = Rc::new(RefCell::new(entry));
 
-                                self.mods.push(entry_ref.clone());
-                                self.digest_map.insert(digest.into(), (entry_ref, 0));
+                                self.id_path_map.insert(mod_id.id.clone(), mod_path.clone());
+                                self.digest_map
+                                    .insert(mod_id.digest.clone(), (entry_ref.clone(), 0));
+                                self.mods.push(entry_ref);
                             }
                         }
 
@@ -195,7 +161,7 @@ impl Installer {
                             count = installed_count
                         )));
 
-                        let unrecognized_count = ctx.out_digest_list.len() - installed_count;
+                        let unrecognized_count = ctx.out_id_list.len() - installed_count;
 
                         if unrecognized_count > 0 {
                             self.log(MessageType::warning(t!(
@@ -218,8 +184,11 @@ impl Installer {
                     }
 
                     patch::TaskContext::InstallMod(ctx) => {
-                        if let Some(entry) = self.get_entry_ref(&ctx.entry) {
-                            entry.borrow_mut().state = ModEntryState::Installed;
+                        if let Some(entry_ref) = self.get_entry_ref(&ctx.entry) {
+                            let mut entry = entry_ref.borrow_mut();
+                            entry.state = ModEntryState::Installed;
+                            self.id_path_map
+                                .insert(entry.entry.id.clone(), ctx.out_path);
 
                             self.log(MessageType::success(t!(
                                 "status.mod_install",
@@ -238,6 +207,8 @@ impl Installer {
                             {
                                 self.mods.remove(idx);
                             }
+
+                            self.id_path_map.remove(&entry.borrow().entry.id);
 
                             self.log(MessageType::success(t!(
                                 "status.mod_uninstall",
@@ -309,6 +280,10 @@ impl Installer {
         )
     }
 
+    pub fn get_entry_path(&self, entry: &ModEntry) -> Option<&PathBuf> {
+        self.id_path_map.get(&entry.entry.id)
+    }
+
     pub fn get_dependencies(&self, entry: &ModEntry) -> Vec<ModEntryRef> {
         entry
             .entry
@@ -373,7 +348,8 @@ impl Installer {
         patch::get_installed_mods(
             patch::GetInstalledModsContext {
                 directories: self.dirs.clone(),
-                out_digest_list: Vec::new(),
+                out_id_list: Vec::new(),
+                out_path_list: Vec::new(),
             },
             self.tx.clone(),
         );
@@ -393,6 +369,7 @@ impl Installer {
             patch::InstallModContext {
                 directories: self.dirs.clone(),
                 entry: entry.clone(),
+                out_path: PathBuf::new(),
             },
             self.tx.clone(),
         );
@@ -419,14 +396,20 @@ impl Installer {
             return;
         }
 
+        let Some(path) = self.get_entry_path(entry) else {
+            self.log(MessageType::warning(t!("error.path_locate")));
+            return;
+        };
+
         if !matches!(entry.state, ModEntryState::PendingVersionChangeFrom(_)) {
             entry.state = ModEntryState::PendingUninstall;
         }
 
         patch::uninstall_mod(
-            patch::InstallModContext {
+            patch::UninstallModContext {
                 directories: self.dirs.clone(),
                 entry: entry.clone(),
+                path: path.clone(),
             },
             self.tx.clone(),
         );

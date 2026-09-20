@@ -3,8 +3,11 @@ use eframe::egui::{
     Stroke, TextEdit, Ui,
 };
 
-use crate::app::{Installer, InstallerState, ModEntry, ModEntryRef, ModEntryState};
-use crate::config::{FilterBy, PopupState, SortBy};
+use crate::{
+    app::{Installer, InstallerState},
+    config::{FilterBy, PopupState, SortBy},
+    modentry::{ModEntry, ModEntryRef, ModEntryState},
+};
 
 const GUIDE_URL: &str = "https://useredge.github.io/spinshare-wiki/modding/installation-guide/";
 const UPDATE_URL: &str = "https://github.com/TakingFire/SRXDModManager/releases/latest";
@@ -523,7 +526,7 @@ impl Gui {
                                 ui.columns(column_count, |cols| {
                                     for (col, ui) in cols.iter_mut().enumerate() {
                                         for row in 0..entries_per_column {
-                                            let entry = row * column_count + col;
+                                            let entry = row + col * entries_per_column;
                                             if entry >= self.filtered_mods.len() {
                                                 break;
                                             }
@@ -734,16 +737,9 @@ impl Gui {
                             )
                             && ui.button(t!("modentry.button.open_folder")).clicked()
                         {
-                            let _ = open::that(
-                                self.installer
-                                    .dirs
-                                    .app_dir
-                                    .as_ref()
-                                    .unwrap()
-                                    .join("BepInEx")
-                                    .join("plugins")
-                                    .join(&entry.entry.versions[entry.selected_version].digest),
-                            );
+                            if let Some(path) = self.installer.get_entry_path(entry) {
+                                let _ = open::that(path);
+                            }
                         }
                     });
                 });

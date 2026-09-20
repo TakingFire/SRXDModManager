@@ -3,6 +3,7 @@
 mod app;
 mod config;
 mod gui;
+mod modentry;
 mod patch;
 
 #[macro_use]
@@ -37,7 +38,7 @@ fn main() -> eframe::Result {
                 width: 64,
                 height: 64,
             })
-            .with_inner_size([600.0, 440.0])
+            .with_inner_size([620.0, 440.0])
             .with_resizable(true)
             .with_active(true),
         ..Default::default()
