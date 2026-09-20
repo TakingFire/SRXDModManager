@@ -10,6 +10,16 @@ const GUIDE_URL: &str = "https://useredge.github.io/spinshare-wiki/modding/insta
 const UPDATE_URL: &str = "https://github.com/TakingFire/SRXDModManager/releases/latest";
 const ISSUES_URL: &str = "https://github.com/TakingFire/SRXDModManager/issues/new";
 
+pub struct Theme;
+
+impl Theme {
+    pub const BLUE: Color32 = Color32::from_rgb(90, 170, 255);
+    pub const ORANGE: Color32 = Color32::from_rgb(255, 160, 80);
+    pub const RED: Color32 = Color32::from_rgb(255, 40, 60);
+
+    const OVERLAY: Color32 = Color32::from_gray(6);
+}
+
 #[derive(Default)]
 pub struct Gui {
     pub installer: Installer,
@@ -264,10 +274,10 @@ impl Gui {
     fn draw_error_bar(&mut self, ui: &mut Ui) {
         Panel::bottom("ui_error")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Color32::RED))
+            .frame(Self::get_popup_fill(&ui, Theme::RED))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
-                    ui.label(RichText::new(t!("popup.error.text")).color(Color32::RED));
+                    ui.label(RichText::new(t!("popup.error.text")).color(Theme::RED));
                     if ui.small_button(t!("popup.error.btn_retry")).clicked() {
                         self.installer.init();
                     }
@@ -289,7 +299,7 @@ impl Gui {
     fn draw_mod_update_bar(&mut self, ui: &mut Ui) {
         Panel::top("ui_mod_update")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Color32::from_rgb(90, 170, 255)))
+            .frame(Self::get_popup_fill(&ui, Theme::BLUE))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -297,7 +307,7 @@ impl Gui {
                             "popup.mod_update.text",
                             count = self.updatable_mods.len()
                         ))
-                        .color(Color32::from_rgb(90, 170, 255)),
+                        .color(Theme::BLUE),
                     );
                     if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
                         self.installer.config.filter_by = FilterBy::Updatable;
@@ -321,7 +331,7 @@ impl Gui {
     fn draw_app_update_bar(&mut self, ui: &mut Ui) {
         Panel::bottom("ui_app_update")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Color32::from_rgb(90, 170, 255)))
+            .frame(Self::get_popup_fill(&ui, Theme::BLUE))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -333,7 +343,7 @@ impl Gui {
                                 .clone()
                                 .unwrap_or_default()
                         ))
-                        .color(Color32::from_rgb(90, 170, 255)),
+                        .color(Theme::BLUE),
                     );
                     if ui
                         .small_button(t!("popup.app_update.btn_download"))
@@ -355,7 +365,7 @@ impl Gui {
     fn draw_unrecognized_bar(&mut self, ui: &mut Ui) {
         Panel::top("ui_unrecognized")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Color32::from_rgb(255, 160, 80)))
+            .frame(Self::get_popup_fill(&ui, Theme::ORANGE))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -363,7 +373,7 @@ impl Gui {
                             "popup.mod_unrecognized.text",
                             count = self.unrecognized_mods.len()
                         ))
-                        .color(Color32::from_rgb(255, 160, 80)),
+                        .color(Theme::ORANGE),
                     );
                     if ui
                         .small_button(t!("popup.mod_unrecognized.btn_show"))
@@ -422,7 +432,7 @@ impl Gui {
                         ui.add_space(4.0);
                         ui.label(RichText::new(t!("label.categories")).size(16.0));
                         Frame::group(ui.style())
-                            .fill(ui.visuals().window_fill + Color32::from_gray(6))
+                            .fill(ui.visuals().window_fill + Theme::OVERLAY)
                             .show(ui, |ui| {
                                 let config = &mut self.installer.config;
 
@@ -457,7 +467,7 @@ impl Gui {
                         ui.add_space(4.0);
                         ui.label(RichText::new(t!("label.output")).size(16.0));
                         Frame::group(ui.style())
-                            .fill(ui.visuals().window_fill + Color32::from_gray(6))
+                            .fill(ui.visuals().window_fill + Theme::OVERLAY)
                             .show(ui, |ui| {
                                 ui.set_max_height(ui.available_height() - 26.0);
                                 ui.take_available_space();
@@ -595,18 +605,18 @@ impl Gui {
 
     fn draw_mod_entry(&mut self, ui: &mut Ui, entry: &mut ModEntry) {
         let accent_color = if !entry.recognized {
-            Color32::from_rgb(255, 160, 80).gamma_multiply(0.25)
+            Theme::ORANGE.gamma_multiply(0.25)
         } else if matches!(entry.state, ModEntryState::PendingVersionChangeFrom(_)) {
             let time = ui.input(|i| i.time) as f32;
             let pulse = (time * 1.5).sin().abs() * 0.25 + 0.25;
-            Color32::from_rgb(90, 170, 255).gamma_multiply(pulse)
+            Theme::BLUE.gamma_multiply(pulse)
         } else if matches!(entry.state, ModEntryState::Installed) {
-            Color32::from_rgb(90, 170, 255).gamma_multiply(0.25)
+            Theme::BLUE.gamma_multiply(0.25)
         } else {
             Color32::TRANSPARENT
         };
 
-        let fill_color = ui.visuals().window_fill + Color32::from_gray(6);
+        let fill_color = ui.visuals().window_fill + Theme::OVERLAY;
         let border_color = ui.visuals().window_stroke.color;
 
         Frame::group(ui.style())
@@ -788,9 +798,9 @@ impl Gui {
                         ui.add_space(8.0);
 
                         ui.style_mut().visuals.widgets.inactive.weak_bg_fill =
-                            Color32::TRANSPARENT.blend(Color32::RED.gamma_multiply(0.125));
+                            Color32::TRANSPARENT.blend(Theme::RED.gamma_multiply(0.125));
                         ui.style_mut().visuals.widgets.hovered.weak_bg_fill =
-                            Color32::TRANSPARENT.blend(Color32::RED.gamma_multiply(0.25));
+                            Color32::TRANSPARENT.blend(Theme::RED.gamma_multiply(0.25));
 
                         if ui.button(t!("settings.btn_remove_mods")).clicked() {
                             self.installer.uninstall_all_mods();

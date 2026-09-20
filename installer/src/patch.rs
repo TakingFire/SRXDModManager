@@ -9,7 +9,10 @@ use flume::Sender;
 use model::Manifest;
 use tokio::{fs, time::error::Elapsed};
 
-use crate::app::{DirectoryList, ModEntry, ModEntryState};
+use crate::{
+    app::{DirectoryList, ModEntry, ModEntryState},
+    gui,
+};
 
 const MANIFEST_URL: &str = "https://srxd.bacur.xyz/mods";
 const PATCHER_URL: &str = "https://srxd.bacur.xyz/bepinex";
@@ -92,9 +95,9 @@ impl MessageType {
     pub fn rich_text(&self) -> RichText {
         match self {
             Self::Default(s) => RichText::new(s),
-            Self::Success(s) => RichText::new(s).color(Color32::from_rgb(90, 170, 255)),
-            Self::Warning(s) => RichText::new(s).color(Color32::from_rgb(255, 160, 80)),
-            Self::Error(s) => RichText::new(s).color(Color32::RED),
+            Self::Success(s) => RichText::new(s).color(gui::Theme::BLUE),
+            Self::Warning(s) => RichText::new(s).color(gui::Theme::ORANGE),
+            Self::Error(s) => RichText::new(s).color(gui::Theme::RED),
         }
     }
 
