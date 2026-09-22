@@ -1,6 +1,6 @@
 [package]
 name = "installer"
-version = "1.0.0"
+version = "1.1.0"
 edition = "2024"
 build = "build.rs"
 default-run = "SRXDManager"
@@ -8,7 +8,7 @@ default-run = "SRXDManager"
 [package.metadata.winresource]
 ProductName = "SRXDManager"
 FileDescription = "SRXD Mod Manager"
-ProductVersion = "0.1.0"
+ProductVersion = "1.1.0"
 Comments = "Created by bacur.xyz"
 
 [[bin]]
