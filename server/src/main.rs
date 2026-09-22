@@ -34,7 +34,9 @@ async fn main() {
 
         loop {
             interval.tick().await;
-            let _ = build_manifest().await;
+            if let Err(err) = build_manifest().await {
+                eprintln!("Failed to build manifest: {:?}", err);
+            }
         }
     });
 
@@ -121,18 +123,6 @@ async fn build_manifest() -> anyhow::Result<()> {
         })
         .collect();
 
-    for (_, mod_entry) in &mut entry_map {
-        mod_entry
-            .versions
-            .sort_by(|a, b| b.created_at.cmp(&a.created_at));
-
-        for category in &mod_entry.categories {
-            if !manifest.categories.contains(category) {
-                manifest.categories.push(category.clone());
-            }
-        }
-    }
-
     let progress_bars = MultiProgress::new();
     let plugins_progress = progress_bars.add(ProgressBar::new(entry_map.len() as u64));
     let releases_progress = progress_bars.add(ProgressBar::new(0));
@@ -163,6 +153,18 @@ async fn build_manifest() -> anyhow::Result<()> {
 
     plugins_progress.finish_and_clear();
     releases_progress.finish_and_clear();
+
+    for (_, mod_entry) in &mut entry_map {
+        mod_entry
+            .versions
+            .sort_by(|a, b| b.created_at.cmp(&a.created_at));
+
+        for category in &mod_entry.categories {
+            if !manifest.categories.contains(category) {
+                manifest.categories.push(category.clone());
+            }
+        }
+    }
 
     manifest.mods = entry_map
         .iter()
