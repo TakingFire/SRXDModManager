@@ -625,7 +625,7 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.launch_game")))?;
 
-            let result = wait_for_process("SpinRhythm.exe", Duration::from_secs(15)).await;
+            let result = wait_for_process("SpinRhythm.exe", Duration::from_secs(30)).await;
 
             if result.is_ok() {
                 let _ = tx.send(StatusType::Message(MessageType::success(t!(

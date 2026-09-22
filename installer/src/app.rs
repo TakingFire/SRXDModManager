@@ -243,6 +243,9 @@ impl Installer {
                         }
                     }
 
+                    patch::TaskContext::GetExistingConfig(_)
+                    | patch::TaskContext::CopyExistingConfig(_) => {}
+
                     patch::TaskContext::InstallMod(ctx) => {
                         if let Some(entry) = self.get_entry_ref(&ctx.entry) {
                             entry.borrow_mut().state = ModEntryState::Uninstalled;
@@ -260,8 +263,9 @@ impl Installer {
                         self.launch_game();
                     }
 
-                    patch::TaskContext::GetExistingConfig(_)
-                    | patch::TaskContext::CopyExistingConfig(_) => {}
+                    patch::TaskContext::LaunchGame(_) => {
+                        self.state = InstallerState::Ready;
+                    }
 
                     _ => self.state = InstallerState::Error,
                 },

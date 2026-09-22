@@ -255,8 +255,8 @@ impl Gui {
         });
     }
 
-    fn draw_launching_popup(&self, ui: &Ui) {
-        Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
+    fn draw_launching_popup(&mut self, ui: &Ui) {
+        let modal = Modal::new(Id::new("ui_disclaimer")).show(ui, |ui| {
             ui.set_width(240.0);
             ui.vertical_centered(|ui| {
                 ui.label(RichText::new(t!("popup.launching.title")).size(18.0));
@@ -266,6 +266,10 @@ impl Gui {
                 ui.label(t!("popup.launching.text"));
             });
         });
+
+        if modal.backdrop_response.clicked() {
+            self.installer.state = InstallerState::Ready;
+        }
     }
 
     fn get_popup_fill(ui: &Ui, color: Color32) -> egui::Frame {
