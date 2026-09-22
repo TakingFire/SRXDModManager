@@ -835,11 +835,10 @@ async fn wait_for_process(name: &str, timeout: Duration) -> Result<(), Elapsed> 
                 sysinfo::ProcessRefreshKind::nothing().with_exe(sysinfo::UpdateKind::OnlyIfNotSet),
             );
 
-            if sys
-                .processes()
-                .values()
-                .any(|p| p.exe().and_then(|path| path.file_name()) == Some(name.as_ref()))
-            {
+            if sys.processes().values().any(|p| {
+                p.name().to_string_lossy() == name
+                    || p.exe().and_then(|path| path.file_name()) == Some(name.as_ref())
+            }) {
                 break;
             }
 
