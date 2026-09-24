@@ -637,11 +637,24 @@ impl Gui {
                 ui.horizontal(|ui| {
                     ui.vertical(|ui| {
                         ui.horizontal(|ui| {
-                            ui.hyperlink_to(
-                                RichText::new(entry.entry.name.clone()).size(16.0),
-                                entry.entry.url.clone(),
-                            )
-                            .on_hover_text(entry.entry.url.clone());
+                            if entry.recognized {
+                                ui.hyperlink_to(
+                                    RichText::new(entry.entry.name.clone()).size(16.0),
+                                    entry.entry.url.clone(),
+                                )
+                                .on_hover_text(entry.entry.url.clone());
+                            } else {
+                                if ui.link(entry.entry.name.clone()).clicked()
+                                    && let Some(path) = self.installer.get_entry_path(entry)
+                                {
+                                    if path.is_file() {
+                                        let _ = open::that(path.parent().unwrap_or(path));
+                                    } else {
+                                        let _ = open::that(path);
+                                    }
+                                }
+                            }
+
                             ui.label(
                                 RichText::new(t!(
                                     "modentry.author",
