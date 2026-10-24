@@ -201,7 +201,10 @@ pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
             let download = reqwest::get(PATCHER_URL)
                 .await
                 .inspect_err(|e| eprintln!("{e}"))
-                .map_err(|_| MessageType::error(t!("error.download")))?;
+                .map_err(|_| MessageType::error(t!("error.download")))?
+                .error_for_status()
+                .inspect_err(|e| eprintln!("{e}"))
+                .map_err(|_| MessageType::error(t!("error.web_request")))?;
 
             let mut archive = zip::ZipArchive::new(std::io::Cursor::new(
                 download
@@ -241,10 +244,13 @@ pub fn get_manifest(mut ctx: GetManifestContext, tx: Sender<StatusType>) {
                 .await
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.web_request")))?
+                .error_for_status()
+                .inspect_err(|e| eprintln!("{e}"))
+                .map_err(|_| MessageType::error(t!("error.web_request")))?
                 .text()
                 .await
                 .inspect_err(|e| eprintln!("{e}"))
-                .map_err(|err| MessageType::error(err.to_string()))?;
+                .map_err(|_| MessageType::error(t!("error.web_request")))?;
 
             #[derive(serde::Deserialize)]
             struct Header {
@@ -438,15 +444,18 @@ pub fn install_mod(mut ctx: InstallModContext, tx: Sender<StatusType>) {
 
             ctx.out_path = plugin_dir.clone();
 
+            let download = reqwest::get(version.url.clone())
+                .await
+                .inspect_err(|e| eprintln!("{e}"))
+                .map_err(|_| MessageType::error(t!("error.download")))?
+                .error_for_status()
+                .inspect_err(|e| eprintln!("{e}"))
+                .map_err(|_| MessageType::error(t!("error.web_request")))?;
+
             fs::create_dir_all(&plugin_dir)
                 .await
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.path_create")))?;
-
-            let download = reqwest::get(version.url.clone())
-                .await
-                .inspect_err(|e| eprintln!("{e}"))
-                .map_err(|_| MessageType::error(t!("error.download")))?;
 
             match plugin_name
                 .split('.')
