@@ -7,6 +7,7 @@ use configparser::ini::Ini;
 use eframe::egui::RichText;
 use flume::Sender;
 use model::Manifest;
+use reqwest::{Client, header::HeaderMap};
 use serde::{Deserialize, Serialize};
 use tokio::{fs, time::error::Elapsed};
 
@@ -444,7 +445,18 @@ pub fn install_mod(mut ctx: InstallModContext, tx: Sender<StatusType>) {
 
             ctx.out_path = plugin_dir.clone();
 
-            let download = reqwest::get(version.url.clone())
+            let client = reqwest::Client::builder()
+                .user_agent(concat!(
+                    "TakingFire-SRXDModManager/",
+                    env!("CARGO_PKG_VERSION")
+                ))
+                .build()
+                .inspect_err(|e| eprintln!("{e}"))
+                .map_err(|_| MessageType::error(t!("error.download")))?;
+
+            let download = client
+                .get(version.url.clone())
+                .send()
                 .await
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.download")))?
