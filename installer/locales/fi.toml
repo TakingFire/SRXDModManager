@@ -55,6 +55,16 @@ link = "SpinShare Modaus Opas"
 text2 = "ja käynnistä ohjelma uudelleen. (Jos käytät jo Protonia, tätä ei tarvitse huomioida)"
 button = "Sulje"
 
+[popup.folder_select]
+title = "Set Download Location"
+text = "Where should mod files be installed?"
+btn_default = "App folder (Default)"
+btn_game = "Game folder"
+btn_custom = "Custom folder"
+invalid_path = "Invalid file path"
+btn_browse = "Browse"
+btn_done = "Done"
+
 [popup.existing_config]
 title = "Modiasetuksia Löydetty"
 text1 = "Sinulla on olemassa olevia asetustiedostoja."
@@ -84,6 +94,7 @@ btn_remove = "Poista Kaikki"
 
 [settings]
 title = "Asetukset"
+btn_set_mods_folder = "Change Plugins Folder"
 btn_plugins_folder = "Avaa Modikansio"
 btn_game_folder = "Avaa Pelikansio"
 btn_steam_folder = "Avaa Steam- kansio"
