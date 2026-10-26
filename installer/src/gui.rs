@@ -435,7 +435,7 @@ impl Gui {
                         .color(Theme::BLUE),
                     );
                     if ui.small_button(t!("popup.mod_update.btn_show")).clicked() {
-                        self.installer.config.filter_by = FilterBy::Updatable;
+                        self.installer.config.filter_by = FilterBy::Outdated;
                         self.installer.force_ui_update = true;
                     }
                     if ui.small_button(t!("popup.mod_update.btn_update")).clicked() {
@@ -689,6 +689,20 @@ impl Gui {
                 FilterBy::Uninstalled,
                 t!("config.filter.uninstalled"),
             );
+            if matches!(config.filter_by, FilterBy::Outdated) {
+                ui.selectable_value(
+                    &mut config.filter_by,
+                    FilterBy::Outdated,
+                    t!("config.filter.outdated"),
+                );
+            }
+            if matches!(config.filter_by, FilterBy::Unrecognized) {
+                ui.selectable_value(
+                    &mut config.filter_by,
+                    FilterBy::Unrecognized,
+                    t!("config.filter.unrecognized"),
+                );
+            }
 
             ui.label(t!("label.sort"));
             let _ = ComboBox::from_id_salt("ui_sort")
@@ -1038,7 +1052,7 @@ impl Gui {
                     entry.borrow().state,
                     ModEntryState::Uninstalled | ModEntryState::PendingInstall
                 ),
-                FilterBy::Updatable => matches!(
+                FilterBy::Outdated => matches!(
                     entry.borrow().state,
                     ModEntryState::PendingVersionChangeFrom(_)
                 ),

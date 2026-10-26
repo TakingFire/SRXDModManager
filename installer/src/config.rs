@@ -11,7 +11,7 @@ pub enum FilterBy {
     All,
     Installed,
     Uninstalled,
-    Updatable,
+    Outdated,
     Unrecognized,
 }
 
