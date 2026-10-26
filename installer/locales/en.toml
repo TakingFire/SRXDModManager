@@ -55,6 +55,16 @@ link = "SpinShare Modding Guide"
 text2 = "and restart this program. (If you are already using Proton, you may disregard this)"
 button = "Close"
 
+[popup.folder_select]
+title = "Set Download Location"
+text = "Where should mod files be installed?"
+btn_default = "App folder (Default)"
+btn_game = "Game folder"
+btn_custom = "Custom folder"
+invalid_path = "Invalid file path"
+btn_browse = "Browse"
+btn_done = "Done"
+
 [popup.existing_config]
 title = "Mod Configs Found"
 text1 = "You have existing mod configuration files."
@@ -84,6 +94,7 @@ btn_remove = "Remove All"
 
 [settings]
 title = "Settings"
+btn_set_mods_folder = "Change Plugins Folder"
 btn_plugins_folder = "Open Plugins Folder"
 btn_game_folder = "Open Game Folder"
 btn_steam_folder = "Open Steam Folder"

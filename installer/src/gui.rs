@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use eframe::egui::{
     self, CentralPanel, Color32, ComboBox, Frame, Id, Modal, OpenUrl, Panel, RichText, ScrollArea,
     Stroke, TextEdit, Ui,
@@ -5,7 +7,7 @@ use eframe::egui::{
 
 use crate::{
     app::{Installer, InstallerState},
-    config::{FilterBy, PopupState, SortBy},
+    config::{DownloadPath, FilterBy, PopupState, SortBy},
     modentry::{ModEntry, ModEntryRef, ModEntryState},
 };
 
@@ -34,7 +36,7 @@ pub struct Gui {
     disclaimer_checkbox: bool,
     linux_guide_checkbox: bool,
     existing_config_checkbox: bool,
-
+    custom_path_text: String,
     show_settings: bool,
 
     initialized: bool,
@@ -65,6 +67,12 @@ impl eframe::App for Gui {
 
             self.installer.config.popup_linux_guide.enable();
             self.installer.config.popup_disclaimer.enable();
+            self.installer.config.popup_existing_config.dismiss();
+
+            self.custom_path_text = match &self.installer.config.download_path {
+                DownloadPath::Custom(Some(path)) => path.to_string_lossy().into(),
+                _ => String::default(),
+            };
 
             self.initialized = true;
         }
@@ -104,6 +112,10 @@ impl eframe::App for Gui {
 
             () if matches!(config.popup_disclaimer, PopupState::Active) => {
                 self.draw_disclaimer(ui);
+            }
+
+            () if matches!(config.popup_folder_select, PopupState::Active) => {
+                self.draw_folder_select(ui);
             }
 
             () if matches!(config.popup_existing_config, PopupState::Active) => {
@@ -219,6 +231,112 @@ impl Gui {
         });
     }
 
+    fn draw_folder_select(&mut self, ui: &Ui) {
+        Modal::new(Id::new("ui_folder_select")).show(ui, |ui| {
+            ui.set_width(260.0);
+            ui.vertical_centered(|ui| {
+                ui.label(RichText::new(t!("popup.folder_select.title")).size(18.0));
+                ui.label(t!("popup.folder_select.text"));
+                ui.add_space(8.0);
+
+                let config = &mut self.installer.config;
+                let dirs = &mut self.installer.dirs;
+                let app_dir = dirs.app_dir.as_ref().unwrap();
+                let game_dir = dirs.game_dir.as_ref().unwrap();
+
+                let using_custom_path = matches!(config.download_path, DownloadPath::Custom(_));
+                let path_is_valid = !matches!(config.download_path, DownloadPath::Custom(None));
+
+                ui.horizontal(|ui| {
+                    ui.add_space(20.0);
+                    ui.vertical(|ui| {
+                        ui.vertical(|ui| {
+                            ui.radio_value(
+                                &mut config.download_path,
+                                DownloadPath::Default,
+                                t!("popup.folder_select.btn_default"),
+                            );
+                            ui.label(RichText::new(app_dir.to_string_lossy()).size(12.0).weak());
+                        });
+                        ui.add_space(8.0);
+                        ui.vertical(|ui| {
+                            ui.radio_value(
+                                &mut config.download_path,
+                                DownloadPath::Game,
+                                t!("popup.folder_select.btn_game"),
+                            );
+                            ui.label(RichText::new(game_dir.to_string_lossy()).size(12.0).weak());
+                        });
+                        ui.add_space(8.0);
+                        ui.vertical(|ui| {
+                            if ui
+                                .radio(using_custom_path, t!("popup.folder_select.btn_custom"))
+                                .clicked()
+                            {
+                                config.download_path = DownloadPath::Custom(
+                                    PathBuf::from(self.custom_path_text.to_owned())
+                                        .canonicalize()
+                                        .ok(),
+                                );
+                            }
+
+                            ui.add_enabled_ui(using_custom_path, |ui| {
+                                ui.horizontal(|ui| {
+                                    let response = ui.add(
+                                        TextEdit::singleline(&mut self.custom_path_text)
+                                            .cursor_at_end(true)
+                                            .desired_width(160.0),
+                                    );
+
+                                    if response.lost_focus() {
+                                        let path = PathBuf::from(self.custom_path_text.to_owned())
+                                            .canonicalize()
+                                            .ok();
+
+                                        config.download_path = DownloadPath::Custom(path.clone());
+                                    };
+
+                                    if ui.button(t!("popup.folder_select.btn_browse")).clicked() {
+                                        let path = rfd::FileDialog::new()
+                                            .set_directory(dirs.download_dir.as_ref().unwrap())
+                                            .pick_folder();
+                                        config.download_path = DownloadPath::Custom(path.clone());
+                                        if let Some(path) = path {
+                                            self.custom_path_text = path.to_string_lossy().into();
+                                        }
+                                    }
+                                });
+                            });
+
+                            if !path_is_valid {
+                                ui.label(
+                                    RichText::new(t!("popup.folder_select.invalid_path"))
+                                        .color(Theme::ORANGE),
+                                );
+                            }
+                        });
+                    });
+                });
+
+                ui.add_space(8.0);
+                ui.vertical_centered_justified(|ui| {
+                    if !path_is_valid {
+                        ui.disable();
+                    }
+                    if ui.button(t!("popup.folder_select.btn_done")).clicked() {
+                        self.installer.config.popup_folder_select.disable();
+
+                        if self.installer.dirs.download_dir == self.installer.dirs.game_dir {
+                            self.installer.config.popup_existing_config.dismiss();
+                        }
+
+                        self.installer.init();
+                    }
+                });
+            });
+        });
+    }
+
     fn draw_config_popup(&mut self, ui: &Ui) {
         Modal::new(Id::new("ui_config")).show(ui, |ui| {
             ui.set_width(230.0);
@@ -281,7 +399,7 @@ impl Gui {
     fn draw_error_bar(&mut self, ui: &mut Ui) {
         Panel::bottom("ui_error")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Theme::RED))
+            .frame(Self::get_popup_fill(ui, Theme::RED))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(RichText::new(t!("popup.error.text")).color(Theme::RED));
@@ -306,7 +424,7 @@ impl Gui {
     fn draw_mod_update_bar(&mut self, ui: &mut Ui) {
         Panel::top("ui_mod_update")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Theme::BLUE))
+            .frame(Self::get_popup_fill(ui, Theme::BLUE))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -338,7 +456,7 @@ impl Gui {
     fn draw_app_update_bar(&mut self, ui: &mut Ui) {
         Panel::bottom("ui_app_update")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Theme::BLUE))
+            .frame(Self::get_popup_fill(ui, Theme::BLUE))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -372,7 +490,7 @@ impl Gui {
     fn draw_unrecognized_bar(&mut self, ui: &mut Ui) {
         Panel::top("ui_unrecognized")
             .exact_size(28.0)
-            .frame(Self::get_popup_fill(&ui, Theme::ORANGE))
+            .frame(Self::get_popup_fill(ui, Theme::ORANGE))
             .show(ui, |ui| {
                 ui.horizontal_centered(|ui| {
                     ui.label(
@@ -753,10 +871,9 @@ impl Gui {
                                     | ModEntryState::PendingVersionChangeFrom(_)
                             )
                             && ui.button(t!("modentry.button.open_folder")).clicked()
+                            && let Some(path) = self.installer.get_entry_path(entry)
                         {
-                            if let Some(path) = self.installer.get_entry_path(entry) {
-                                let _ = open::that(path);
-                            }
+                            let _ = open::that(path);
                         }
                     });
                 });
@@ -787,6 +904,12 @@ impl Gui {
                 ui.label(RichText::new(t!("settings.title")).size(18.0));
                 ui.add_space(8.0);
 
+                if ui.button(t!("settings.btn_set_mods_folder")).clicked() {
+                    self.installer.config.popup_folder_select.force_enable();
+                }
+
+                ui.add_space(8.0);
+
                 ui.columns(2, |cols| {
                     cols[0].vertical_centered_justified(|ui| {
                         let dirs = &self.installer.dirs;
@@ -796,7 +919,7 @@ impl Gui {
                             |ui| {
                                 if ui.button(t!("settings.btn_plugins_folder")).clicked() {
                                     let _ = open::that(
-                                        dirs.app_dir.as_ref().unwrap().join("BepInEx/plugins"),
+                                        dirs.download_dir.as_ref().unwrap().join("BepInEx/plugins"),
                                     );
                                 }
                                 if ui.button(t!("settings.btn_game_folder")).clicked() {

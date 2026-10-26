@@ -4,7 +4,7 @@ use flume::{Receiver, Sender};
 use model::{Mod, Version};
 
 use crate::{
-    config::InstallerConfig,
+    config::{DownloadPath, InstallerConfig, PopupState},
     modentry::{ModEntry, ModEntryRef, ModEntryState},
     patch::{self, MessageType, StatusType},
 };
@@ -14,6 +14,7 @@ pub struct DirectoryList {
     pub app_dir: Option<PathBuf>,
     pub game_dir: Option<PathBuf>,
     pub steam_dir: Option<PathBuf>,
+    pub download_dir: Option<PathBuf>,
 }
 
 #[derive(Debug, Default)]
@@ -71,7 +72,7 @@ impl Installer {
     pub fn init(&mut self) {
         self.state = InstallerState::Init;
         self.log.clear();
-        self.log.push(MessageType::default(t!("status.starting")));
+        self.log(MessageType::default(t!("status.starting")));
         self.get_directories();
     }
 
@@ -82,8 +83,19 @@ impl Installer {
 
                 StatusType::Success(ctx) => match ctx {
                     patch::TaskContext::GetDirectories(ctx) => {
-                        self.dirs = ctx;
-                        self.get_manifest();
+                        self.dirs = ctx.clone();
+
+                        self.dirs.download_dir = match self.config.download_path {
+                            DownloadPath::Default => ctx.app_dir,
+                            DownloadPath::Game => ctx.game_dir,
+                            DownloadPath::Custom(ref dir) => dir.clone(),
+                        };
+
+                        if matches!(self.config.popup_folder_select, PopupState::Disabled) {
+                            self.get_manifest();
+                        } else {
+                            self.config.popup_folder_select.enable();
+                        }
                     }
 
                     patch::TaskContext::GetManifest(ctx) => {
@@ -174,9 +186,11 @@ impl Installer {
                         self.log(MessageType::success(t!("status.ready")));
                     }
 
-                    patch::TaskContext::GetExistingConfig(_) => {
-                        self.log(MessageType::default(t!("status.config_found")));
-                        self.config.popup_existing_config.enable();
+                    patch::TaskContext::GetExistingConfig(ctx) => {
+                        if ctx.out_has_configs {
+                            self.log(MessageType::default(t!("status.config_found")));
+                            self.config.popup_existing_config.enable();
+                        }
                     }
 
                     patch::TaskContext::CopyExistingConfig(_) => {
@@ -438,12 +452,22 @@ impl Installer {
     }
 
     pub fn update_mod(&mut self, entry: &mut ModEntry) {
-        self.uninstall_mod(entry, true);
+        // self.uninstall_mod(entry, true);
         self.install_mod(entry);
     }
 
     pub fn get_existing_config(&self) {
-        patch::get_existing_config(self.dirs.clone(), self.tx.clone());
+        if self.dirs.download_dir == self.dirs.game_dir {
+            return;
+        }
+
+        patch::get_existing_config(
+            patch::GetExistingConfigContext {
+                directories: self.dirs.clone(),
+                out_has_configs: false,
+            },
+            self.tx.clone(),
+        );
     }
 
     pub fn copy_existing_config(&self) {

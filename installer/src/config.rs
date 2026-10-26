@@ -1,4 +1,5 @@
 use std::collections::HashSet;
+use std::path::PathBuf;
 
 use model::Manifest;
 use serde::Deserialize;
@@ -22,6 +23,14 @@ pub enum SortBy {
     Author,
 }
 
+#[derive(Debug, Default, PartialEq, Clone, Serialize, Deserialize)]
+pub enum DownloadPath {
+    #[default]
+    Default,
+    Game,
+    Custom(Option<PathBuf>),
+}
+
 #[derive(Debug, Default, Copy, Clone, Serialize, Deserialize)]
 pub enum PopupState {
     #[default]
@@ -37,8 +46,14 @@ impl PopupState {
         }
     }
 
+    pub const fn force_enable(&mut self) {
+        *self = Self::Active;
+    }
+
     pub const fn dismiss(&mut self) {
-        *self = Self::Dismissed;
+        if matches!(self, Self::Active) {
+            *self = Self::Dismissed;
+        }
     }
 
     pub const fn disable(&mut self) {
@@ -51,9 +66,13 @@ impl PopupState {
 pub struct InstallerConfig {
     pub manifest: Manifest,
 
+    pub download_path: DownloadPath,
+
     pub popup_disclaimer: PopupState,
     pub popup_linux_guide: PopupState,
     pub popup_existing_config: PopupState,
+    pub popup_folder_select: PopupState,
+    pub popup_folder_move: PopupState,
 
     pub categories: HashSet<String>,
     pub filter_by: FilterBy,
@@ -72,10 +91,13 @@ impl Default for InstallerConfig {
     fn default() -> Self {
         Self {
             manifest: Manifest::default(),
+            download_path: DownloadPath::default(),
 
             popup_disclaimer: PopupState::Active,
             popup_linux_guide: PopupState::Active,
             popup_existing_config: PopupState::Dismissed,
+            popup_folder_select: PopupState::Dismissed,
+            popup_folder_move: PopupState::Dismissed,
 
             categories: HashSet::default(),
             filter_by: FilterBy::default(),

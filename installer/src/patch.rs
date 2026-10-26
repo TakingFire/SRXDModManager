@@ -7,7 +7,6 @@ use configparser::ini::Ini;
 use eframe::egui::RichText;
 use flume::Sender;
 use model::Manifest;
-use reqwest::{Client, header::HeaderMap};
 use serde::{Deserialize, Serialize};
 use tokio::{fs, time::error::Elapsed};
 
@@ -25,7 +24,7 @@ pub enum TaskContext {
     GetManifest(GetManifestContext),
 
     GetInstalledMods(GetInstalledModsContext),
-    GetExistingConfig(DirectoryList),
+    GetExistingConfig(GetExistingConfigContext),
     CopyExistingConfig(DirectoryList),
 
     InstallMod(InstallModContext),
@@ -47,6 +46,11 @@ pub struct GetInstalledModsContext {
     pub directories: DirectoryList,
     pub out_id_list: Vec<ModIdentifier>,
     pub out_path_list: Vec<PathBuf>,
+}
+
+pub struct GetExistingConfigContext {
+    pub directories: DirectoryList,
+    pub out_has_configs: bool,
 }
 
 pub struct InstallModContext {
@@ -181,7 +185,7 @@ pub fn get_directories(mut ctx: DirectoryList, tx: Sender<StatusType>) {
 pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let patcher_dir = ctx.app_dir.as_ref().unwrap().join("BepInEx");
+            let patcher_dir = ctx.download_dir.as_ref().unwrap().join("BepInEx");
 
             if fs::try_exists(patcher_dir)
                 .await
@@ -222,7 +226,7 @@ pub fn get_patcher(ctx: DirectoryList, tx: Sender<StatusType>) {
             ))));
 
             archive
-                .extract(ctx.app_dir.as_ref().unwrap())
+                .extract(ctx.download_dir.as_ref().unwrap())
                 .inspect_err(|e| eprintln!("{e}"))
                 .map_err(|_| MessageType::error(t!("error.zip_extract")))?;
 
@@ -295,7 +299,7 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
         let result = async || -> Result<(), MessageType> {
             let plugins_dir = ctx
                 .directories
-                .app_dir
+                .download_dir
                 .as_ref()
                 .unwrap()
                 .join("BepInEx/plugins");
@@ -382,15 +386,13 @@ pub fn get_installed_mods(mut ctx: GetInstalledModsContext, tx: Sender<StatusTyp
     });
 }
 
-pub fn get_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
+pub fn get_existing_config(mut ctx: GetExistingConfigContext, tx: Sender<StatusType>) {
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let game_config_dir = ctx.game_dir.as_ref().unwrap().join("BepInEx/config");
+            let game_dir = ctx.directories.game_dir.as_ref().unwrap();
+            let game_config_dir = game_dir.join("BepInEx/config");
 
-            fs::try_exists(&game_config_dir)
-                .await
-                .map_err(|_| MessageType::default(""))?
-                .ok_or_else(|| MessageType::default(t!("")))?;
+            ctx.out_has_configs = fs::try_exists(&game_config_dir).await.unwrap_or(false);
 
             Ok(())
         }()
@@ -407,7 +409,7 @@ pub fn copy_existing_config(ctx: DirectoryList, tx: Sender<StatusType>) {
 
     tokio::spawn(async move {
         let result = async || -> Result<(), MessageType> {
-            let app_config_dir = ctx.app_dir.as_ref().unwrap().join("BepInEx/config");
+            let app_config_dir = ctx.download_dir.as_ref().unwrap().join("BepInEx/config");
             let game_config_dir = ctx.game_dir.as_ref().unwrap().join("BepInEx/config");
 
             copy_dir_all(game_config_dir, app_config_dir)
@@ -437,7 +439,7 @@ pub fn install_mod(mut ctx: InstallModContext, tx: Sender<StatusType>) {
             let plugin_name = ctx.entry.entry.file.replace('*', "");
             let plugin_dir = ctx
                 .directories
-                .app_dir
+                .download_dir
                 .as_ref()
                 .unwrap()
                 .join("BepInEx/plugins")
@@ -538,7 +540,7 @@ pub fn uninstall_mod(ctx: UninstallModContext, tx: Sender<StatusType>) {
         let result = async || -> Result<(), MessageType> {
             let plugin_dir = ctx
                 .directories
-                .app_dir
+                .download_dir
                 .as_ref()
                 .unwrap()
                 .join("BepInEx/plugins");
@@ -667,8 +669,8 @@ pub fn launch_game(ctx: DirectoryList, tx: Sender<StatusType>) {
 }
 
 fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
-    let app_dir = ctx.app_dir.as_ref().unwrap();
-    let config_dir = app_dir.join("doorstop_config.ini");
+    let download_dir = ctx.download_dir.as_ref().unwrap();
+    let config_dir = download_dir.join("doorstop_config.ini");
 
     let mut doorstop = Ini::new();
 
@@ -681,7 +683,7 @@ fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
         "General",
         "target_assembly",
         Some(
-            app_dir
+            download_dir
                 .join("BepInEx/core/BepInEx.Preloader.dll")
                 .to_string_lossy()
                 .into(),
@@ -697,8 +699,8 @@ fn write_doorstop_config(ctx: &DirectoryList) -> Result<(), MessageType> {
 }
 
 async fn write_bepinex_config(ctx: &DirectoryList, show_console: bool) -> Result<(), MessageType> {
-    let app_dir = ctx.app_dir.as_ref().unwrap();
-    let config_dir = app_dir.join("BepInEx/config/BepInEx.cfg");
+    let download_dir = ctx.download_dir.as_ref().unwrap();
+    let config_dir = download_dir.join("BepInEx/config/BepInEx.cfg");
 
     let mut bepinex = Ini::new();
 
@@ -805,21 +807,24 @@ async fn rename_unity_player(
 }
 
 async fn copy_patch_files(ctx: &DirectoryList) -> Result<(), MessageType> {
-    let app_dir = ctx.app_dir.as_ref().unwrap();
+    let download_dir = ctx.download_dir.as_ref().unwrap();
     let game_dir = ctx.game_dir.as_ref().unwrap();
 
     fs::copy(
-        app_dir.join("doorstop_config.ini"),
+        download_dir.join("doorstop_config.ini"),
         game_dir.join("doorstop_config.ini"),
     )
     .await
     .inspect_err(|e| eprintln!("{e}"))
     .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
-    fs::copy(app_dir.join("winhttp.dll"), game_dir.join("winhttp.dll"))
-        .await
-        .inspect_err(|e| eprintln!("{e}"))
-        .map_err(|_| MessageType::error(t!("error.file_copy")))?;
+    fs::copy(
+        download_dir.join("winhttp.dll"),
+        game_dir.join("winhttp.dll"),
+    )
+    .await
+    .inspect_err(|e| eprintln!("{e}"))
+    .map_err(|_| MessageType::error(t!("error.file_copy")))?;
 
     Ok(())
 }
